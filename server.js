@@ -441,6 +441,384 @@
 // });
 
 
+// const express = require('express');
+// const crypto = require('crypto');
+// const cors = require('cors');
+// const sql = require("mssql");
+// const config = require("./dbConfig");
+
+// const app = express();
+// app.use(express.json());
+// app.use(cors()); 
+
+// const NODE_PORT = 5000;
+
+// const staticStudentsTable = {
+//     "CS-2023-001": { name: "Syed Mujtaba Ali", is_active: true },
+//     "CS-2023-002": { name: "Bilal Ahmed Khan", is_active: true }, 
+//     "CS-2023-003": { name: "Zainab Fatima", is_active: true},
+//     "CS-2023-004": { name: "Zainab Fatima", is_active: true}        
+// };
+
+// const staticTransactionsArchive = [];
+// const loginLogTable = []; 
+
+// // 1. Get Login Logs from DB
+// app.get("/r", async (req, res) => {
+//     try {
+//         let pool = await sql.connect(config);
+//         let result = await pool.request().query('SELECT * FROM LoginLog');
+//         return res.json(result.recordset);
+//     } catch (err) {
+//         return res.status(500).send(err.message);
+//     }
+// });
+
+// // 2. Get All Books from DB table 'Book2'
+// app.get("/api/books", async (req, res) => {
+//     try {
+//         let pool = await sql.connect(config);
+//         let result = await pool.request().query("SELECT * FROM Book2");
+
+//         res.json({
+//             success: true,
+//             data: result.recordset
+//         });
+//     } catch (err) {
+//         res.status(500).json({
+//             success: false,
+//             message: err.message
+//         });
+//     }
+// });
+
+// // 3. Student Login
+// // 3. Dynamic Student Login Auth Module (100% DB Driven)
+// app.post('/api/login', async (req, res) => {
+//     const { student_id } = req.body;
+
+//     if (!student_id) {
+//         return res.status(400).json({ success: false, message: "Error: Student ID missing!" });
+//     }
+
+//     try {
+//         let pool = await sql.connect(config);
+        
+//         // Database se student check karein
+//         let studentResult = await pool.request()
+//             .input("student_id", sql.VarChar, student_id)
+//             .query("SELECT * FROM Student WHERE student_id = @student_id");
+
+//         const student = studentResult.recordset[0];
+
+//         // if (student) {
+//         //     console.log(`🔑 Login Logged: Student ${student.name} (${student_id}) successfully authenticated from DB.`);
+//         //     return res.status(200).json({ 
+//         //         success: true, 
+//         //         message: "Login verified successfully!", 
+//         //         student_id: student_id 
+//         //     });
+//         if (!student || student.is_active === false || student.is_active === 0) {
+//             return res.status(403).send(`
+//                 <div style="font-family:Arial; text-align:center; padding:40px;">
+//                     <h1 style="color:#e74c3c;">❌ Transaction Denied</h1>
+//                     <p>Student profile is either <strong>INACTIVE</strong> or Unauthorized in Database.</p>
+//                 </div>
+//             `);
+        
+//         } else {
+//             return res.status(404).json({ success: false, message: "Student record not found in Database." });
+//         }
+
+//     } catch (err) {
+//         return res.status(500).json({ success: false, message: err.message });
+//     }
+// });4
+// // 4. Generate QR Payload Link
+// app.get('/api/generate_qr', (req, res) => {
+//     const { book_id, student_id, action } = req.query;
+//     const currentAction = action || "issue";
+
+//     if (!book_id || !student_id) {
+//         return res.status(400).json({ success: false, message: "Parameters arrays missing!" });
+//     }
+
+//     const target_url = `http://192.168.100.6:${NODE_PORT}/${currentAction}/${book_id}?student_id=${student_id}`;
+//     console.log(`🎯 Generated Matrix Link Vector: ${target_url}`);
+
+//     return res.status(200).json({
+//         success: true,
+//         target_payload: target_url,
+//         image_data: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(target_url)}`
+//     });
+// });
+
+// // // 5. Core Unified Business Logic & DB Book Issuance Controller
+// // app.get('/:action/:book_id', async (req, res) => {
+// //     const { action, book_id } = req.params;
+// //     const { student_id } = req.query;
+
+// //     if (action !== 'issue') {
+// //         return res.status(400).send(`<h1>❌ Error: Invalid System Operation Parameter!</h1>`);
+// //     }
+
+// //     console.log(`⚡ Execution Pipeline Triggered: Processing book ${book_id} for student ${student_id}`);
+// // // Step A: Real-time Student Validations Check from DB
+// // try {
+// //     let pool = await sql.connect(config);
+    
+// //     // Check ke is student ne 'Book2' table mein kitni books li hui hain
+// //     let borrowCountResult = await pool.request()
+// //         .input("student_id", sql.VarChar, student_id)
+// //         .query("SELECT COUNT(*) AS total_borrowed FROM Book2 WHERE borrower = @student_id AND status = 'issued'");
+
+// //     const totalBorrowed = borrowCountResult.recordset[0].total_borrowed;
+
+// //     // Agar count 3 ya us se zyada hai to transaction block kar dein
+// //     if (totalBorrowed >= 9) {
+// //         return res.status(400).send(`
+// //             <div style="font-family:Arial; text-align:center; padding:40px;">
+// //                 <h1 style="color:#e74c3c;">❌ Limit Violation</h1>
+// //                 <p>Constraint breached! You have already borrowed ${totalBorrowed} books (Max limit: 3).</p>
+// //             </div>
+// //         `);
+// //     }
+// // } catch (dbErr) {
+// //     return res.status(500).send(`<h1>Database Check Error: ${dbErr.message}</h1>`);
+// // }
+// //     // Step A: Static Student Validations Check
+// //     const student = staticStudentsTable[student_id];
+// //     if (!student || !student.is_active) {
+// //         return res.status(403).send(`
+// //             <div style="font-family:Arial; text-align:center; padding:40px;">
+// //                 <h1 style="color:#e74c3c;">❌ Transaction Denied</h1>
+// //                 <p>Student system identity parameter profile is <strong>INACTIVE</strong> or Unauthorized.</p>
+// //             </div>
+// //         `);
+// //     }
+
+// //     if (student.borrowed_count >= 3) {
+// //         return res.status(400).send(`
+// //             <div style="font-family:Arial; text-align:center; padding:40px;">
+// //                 <h1 style="color:#e74c3c;">❌ Limit Violation</h1>
+// //                 <p>Constraint breached! Student reached maximum borrow limit capacity (Max 3 books).</p>
+// //             </div>
+// //         `);
+// //     }
+
+// //     // Step B: Real-time DB Queries Execution Loop
+// //     try {
+// //         let pool = await sql.connect(config);
+
+// //         // Fetch book data directly from real SQL Server table Book2
+// //         let result = await pool.request()
+// //             .input("id", sql.VarChar, book_id)
+// //             .query("SELECT * FROM Book2 WHERE id = @id");
+
+// //         const book = result.recordset[0];
+
+// //         // Validation 1: Check Book existence
+// //         if (!book) {
+// //             return res.status(404).send(`
+// //                 <div style="font-family:Arial; text-align:center; padding:40px;">
+// //                     <h1 style="color:#e74c3c;">❌ Registry Error</h1>
+// //                     <p>Asset identifier token <strong>${book_id}</strong> not found inside database catalog.</p>
+// //                 </div>
+// //             `);
+// //         }
+
+// //         // Validation 2: Check Book availability state
+// //         if (book.status !== "available") {
+// //             return res.status(400).send(`
+// //                 <div style="font-family:Arial; text-align:center; padding:40px;">
+// //                     <h1 style="color:#e74c3c;">❌ Concurrency Collision</h1>
+// //                     <p>The requested book asset signature is currently locked. State is already issued to another user.</p>
+// //                 </div>
+// //             `);
+// //         }
+
+// //         // Step C: Commit Phase Processing & Logging Updates
+// //         const generatedTransactionID = 'TXN-' + crypto.randomBytes(5).toString('hex').toUpperCase();
+// //         const issueDate = new Date();
+// //         const dueDate = new Date();
+// //         dueDate.setDate(issueDate.getDate() + 14);
+
+// //         // Update SQL Server record matching table schema configuration definitions
+// //         await pool.request()
+// //             .input("id", sql.VarChar, book_id)
+// //             .input("student", sql.VarChar, student_id)
+// //             .query(`
+// //                 UPDATE Book2
+// //                 SET status='issued', borrower=@student, borrow_count = borrow_count + 1
+// //                 WHERE id=@id
+// //             `);
+
+// //         // Sync count mapping parameter locally
+// //         student.borrowed_count++;
+
+// //         // Cache historical state register metrics node element
+// //         const archiveNodeElement = {
+// //             transaction_id: generatedTransactionID,
+// //             student_id: student_id,
+// //             book_id: book_id,
+// //             title: book.title, 
+// //             issued_date: issueDate.toLocaleString(),
+// //             due_date: dueDate.toLocaleDateString()
+// //         };
+// //         staticTransactionsArchive.push(archiveNodeElement);
+// //         console.log(`📦 Database updated! State Registered Successfully! Txn Logged: ${generatedTransactionID}`);
+
+// //         // Return clean success response receipt HTML block to viewport
+// //         return res.status(200).send(`
+// //             <div style="text-align:center; font-family:'Segoe UI',Arial; padding:50px; background:#f4f7f6; min-height:100vh; margin:0;">
+// //                 <div style="background:white; padding:40px; border-radius:12px; display:inline-block; box-shadow:0 10px 30px rgba(0,0,0,0.08); max-width:450px; border-top: 8px solid #0f5a6e;">
+// //                     <h1 style="color:#2ecc71; margin-top:0;">✅ Digital Book Issued</h1>
+// //                     <p style="color:#666; font-size:14px;">Sir Syed University Smart Library automated system transaction processed safely without manual worker intervention loops.</p>
+// //                     <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+// //                     <div style="text-align:left; font-size:15px; color:#333; line-height:2;">
+// //                         <strong>Transaction ID:</strong> <span style="font-family:monospace; background:#e9ecef; padding:2px 6px; border-radius:4px;">${generatedTransactionID}</span><br>
+// //                         <strong>Student Name:</strong> ${student.name}<br>
+// //                         <strong>Book Title:</strong> ${book.title}<br>
+// //                         <strong>Due Date Allocation:</strong> <span style="color:#e74c3c; font-weight:bold;">${dueDate.toLocaleDateString()}</span>
+// //                     </div>
+// //                 </div>
+// //             </div>
+// //         `);
+
+// //     } catch (err) {
+// //         console.error("SQL Processing Exception: ", err);
+// //         return res.status(500).send(`<h1>Database Transaction Error: ${err.message}</h1>`);
+// //     }
+// // });
+// // --- COMPLETE DATABASE INTEGRATED TRANSACTION LEDGER CONTROLLER ---// --- CORE UNIFIED TRANSACTIONS-BASED ISSUANCE CONTROLLER ---
+// app.get('/:action/:book_id', async (req, res) => {
+//     const { action, book_id } = req.params;
+//     const { student_id } = req.query;
+
+//     if (action !== 'issue') {
+//         return res.status(400).send(`<h1>❌ Error: Invalid System Operation Parameter!</h1>`);
+//     }
+
+//     console.log(`⚡ Execution Pipeline Triggered: Processing book ${book_id} for student ${student_id}`);
+
+//     // Step A: Static Profile Eligibility Check
+//     const student = staticStudentsTable[student_id];
+//     if (!student || !student.is_active) {
+//         return res.status(403).send(`
+//             <div style="font-family:Arial; text-align:center; padding:40px;">
+//                 <h1 style="color:#e74c3c;">❌ Transaction Denied</h1>
+//                 <p>Student system identity parameter profile is <strong>INACTIVE</strong> or Unauthorized.</p>
+//             </div>
+//         `);
+//     }
+
+//     // Step B: Real-time Database Processing Session
+//     try {
+//         let pool = await sql.connect(config);
+        
+//         // ✅ CHANGE 1: Count active borrowed books directly from permanent 'Transactions' table now!
+//         let borrowCountResult = await pool.request()
+//             .input("student_id", sql.VarChar, student_id)
+//             .query("SELECT COUNT(*) AS total_borrowed FROM Transactions WHERE student_id = @student_id AND status = 'issued'");
+
+//         const totalBorrowed = borrowCountResult.recordset[0].total_borrowed;
+//         console.log(`📊 Live Database Metrics: Student ${student_id} has currently ${totalBorrowed} active transactions.`);
+
+//         // Validation A: Max 3 books borrowing limit check
+//         if (totalBorrowed >= 3) {
+//             return res.status(400).send(`
+//                 <div style="font-family:Arial; text-align:center; padding:40px;">
+//                     <h1 style="color:#e74c3c;">❌ Limit Violation</h1>
+//                     <p>Constraint breached! You have already borrowed ${totalBorrowed} books according to Transactions Log (Max limit: 3).</p>
+//                 </div>
+//             `);
+//         }
+
+//         // Fetch book data to check if it's physically available on shelf
+//         let result = await pool.request()
+//             .input("id", sql.VarChar, book_id)
+//             .query("SELECT * FROM Book2 WHERE id = @id");
+
+//         const book = result.recordset[0];
+
+//         // Validation B: Verification of catalog existence
+//         if (!book) {
+//             return res.status(404).send(`
+//                 <div style="font-family:Arial; text-align:center; padding:40px;">
+//                     <h1 style="color:#e74c3c;">❌ Registry Error</h1>
+//                     <p>Asset identifier token <strong>${book_id}</strong> not found inside database catalog.</p>
+//                 </div>
+//             `);
+//         }
+
+//         // Validation C: Double-borrowing prevention check
+//         if (book.status !== "available") {
+//             return res.status(400).send(`
+//                 <div style="font-family:Arial; text-align:center; padding:40px;">
+//                     <h1 style="color:#e74c3c;">❌ Concurrency Collision</h1>
+//                     <p>The requested book asset signature is hunder active lease. State is already issued to another user.</p>
+//                 </div>
+//             `);
+//         }
+
+//         // --- Step C: COMMIT PHASE ---
+//         const generatedTransactionID = 'TXN-' + crypto.randomBytes(5).toString('hex').toUpperCase();
+//         const issueDate = new Date();
+//         const dueDate = new Date();
+//         dueDate.setDate(issueDate.getDate() + 14); // 14 Days return rule
+//         const formattedDueDate = dueDate.toISOString().slice(0, 10); // Format: YYYY-MM-DD
+
+//         // Query 1: Update 'Book2' inventory table status and increment borrow_count (No borrower id columns needed here now)
+//         await pool.request()
+//             .input("id", sql.VarChar, book_id)
+//             .query(`
+//                 UPDATE Book2
+//                 SET status='issued', borrow_count = borrow_count + 1
+//                 WHERE id=@id
+//             `);
+
+//         // ✅ CHANGE 2: Write all student lease assignment data directly inside 'Transactions' table rows
+//         await pool.request()
+//             .input("txn_id", sql.VarChar, generatedTransactionID)
+//             .input("student_id", sql.VarChar, student_id)
+//             .input("book_id", sql.VarChar, book_id)
+//             .input("due_date", sql.VarChar, formattedDueDate)
+//             .query(`
+//                 INSERT INTO Transactions (transaction_id, student_id, book_id, due_date, status)
+//                 VALUES (@txn_id, @student_id, @book_id, @due_date, 'issued')
+//             `);
+
+//         console.log(`📦 SQL Server Permanent Records Saved! New Txn Row Written: ${generatedTransactionID}`);
+
+//         // Return rich responsive layout template
+//         return res.status(200).send(`
+//             <div style="text-align:center; font-family:'Segoe UI',Arial; padding:50px; background:#f4f7f6; min-height:100vh; margin:0;">
+//                 <div style="background:white; padding:40px; border-radius:12px; display:inline-block; box-shadow:0 10px 30px rgba(0,0,0,0.08); max-width:450px; border-top: 8px solid #0f5a6e;">
+//                     <h1 style="color:#2ecc71; margin-top:0;">✅ Digital Book Issued</h1>
+//                     <p style="color:#666; font-size:14px;">Sir Syed University Smart Library automated system transaction processed safely and saved permanently to Transactions Register.</p>
+//                     <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+//                     <div style="text-align:left; font-size:15px; color:#333; line-height:2;">
+//                         <strong>Transaction ID:</strong> <span style="font-family:monospace; background:#e9ecef; padding:2px 6px; border-radius:4px;">${generatedTransactionID}</span><br>
+//                         <strong>Student Name:</strong> ${student.name}<br>
+//                         <strong>Book Title:</strong> ${book.title}<br>
+//                         <strong>Due Date Allocation:</strong> <span style="color:#e74c3c; font-weight:bold;">${formattedDueDate}</span>
+//                     </div>
+//                 </div>
+//             </div>
+//         `);
+
+//     } catch (err) {
+//         console.error("SQL Processing Exception: ", err);
+//         return res.status(500).send(`<h1>Database Transaction Error: ${err.message}</h1>`);
+//     }
+// });
+// // Clear Listener Registry Core App Entry
+// app.listen(5000, () => {
+//     console.log("Server running safely on http://localhost:5000");
+// });
+
+
+
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
@@ -452,12 +830,6 @@ app.use(express.json());
 app.use(cors()); 
 
 const NODE_PORT = 5000;
-
-const staticStudentsTable = {
-    "CS-2023-001": { name: "Syed Mujtaba Ali", is_active: true, borrowed_count: 0 },
-    "CS-2023-002": { name: "Bilal Ahmed Khan", is_active: true, borrowed_count: 3 }, 
-    "CS-2023-003": { name: "Zainab Fatima", is_active: false, borrowed_count: 0 }    
-};
 
 const staticTransactionsArchive = [];
 const loginLogTable = []; 
@@ -477,7 +849,7 @@ app.get("/r", async (req, res) => {
 app.get("/api/books", async (req, res) => {
     try {
         let pool = await sql.connect(config);
-        let result = await pool.request().query("SELECT * FROM Book2");
+        let result = await pool.request().query("SELECT * FROM Book2 WHERE status = 'available'");
 
         res.json({
             success: true,
@@ -491,25 +863,43 @@ app.get("/api/books", async (req, res) => {
     }
 });
 
-// 3. Student Login
-app.post('/api/login', (req, res) => {
+// 3. Dynamic Student Login Auth Module (100% DB Driven)
+app.post('/api/login', async (req, res) => {
     const { student_id } = req.body;
 
     if (!student_id) {
         return res.status(400).json({ success: false, message: "Error: Student ID missing!" });
     }
 
-    if (staticStudentsTable[student_id]) {
-        loginLogTable.push({ id: loginLogTable.length + 1, student_id: student_id });
-        console.log(`🔑 Login Logged: Student ${student_id} successfully authenticated.`);
+    try {
+        let pool = await sql.connect(config);
+        
+        // Database se student verify karein
+        let studentResult = await pool.request()
+            .input("student_id", sql.VarChar, student_id)
+            .query("SELECT * FROM Student WHERE student_id = @student_id");
+
+        const student = studentResult.recordset[0];
+
+        if (!student) {
+            return res.status(404).json({ success: false, message: "Student record not found in Database." });
+        }
+
+        // Check if student profile is active in DB
+        if (student.is_active === false || student.is_active === 0) {
+            return res.status(403).json({ success: false, message: "Access Denied: Student profile is INACTIVE." });
+        }
+
+        console.log(`🔑 Login Logged: Student ${student.name} (${student_id}) successfully authenticated from DB.`);
         
         return res.status(200).json({ 
             success: true, 
             message: "Login verified successfully!", 
             student_id: student_id 
         });
-    } else {
-        return res.status(404).json({ success: false, message: "Student record signature not found." });
+        
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -543,38 +933,49 @@ app.get('/:action/:book_id', async (req, res) => {
 
     console.log(`⚡ Execution Pipeline Triggered: Processing book ${book_id} for student ${student_id}`);
 
-    // Step A: Static Student Validations Check
-    const student = staticStudentsTable[student_id];
-    if (!student || !student.is_active) {
-        return res.status(403).send(`
-            <div style="font-family:Arial; text-align:center; padding:40px;">
-                <h1 style="color:#e74c3c;">❌ Transaction Denied</h1>
-                <p>Student system identity parameter profile is <strong>INACTIVE</strong> or Unauthorized.</p>
-            </div>
-        `);
-    }
-
-    if (student.borrowed_count >= 3) {
-        return res.status(400).send(`
-            <div style="font-family:Arial; text-align:center; padding:40px;">
-                <h1 style="color:#e74c3c;">❌ Limit Violation</h1>
-                <p>Constraint breached! Student reached maximum borrow limit capacity (Max 3 books).</p>
-            </div>
-        `);
-    }
-
-    // Step B: Real-time DB Queries Execution Loop
     try {
         let pool = await sql.connect(config);
 
-        // Fetch book data directly from real SQL Server table Book2
+        // --- STEP A: DYNAMIC STUDENT ELIGIBILITY CHECK FROM DB ---
+        let studentCheckResult = await pool.request()
+            .input("student_id", sql.VarChar, student_id)
+            .query("SELECT * FROM Student WHERE student_id = @student_id");
+
+        const student = studentCheckResult.recordset[0];
+
+        if (!student || student.is_active === false || student.is_active === 0) {
+            return res.status(403).send(`
+                <div style="font-family:Arial; text-align:center; padding:40px;">
+                    <h1 style="color:#e74c3c;">❌ Transaction Denied</h1>
+                    <p>Student profile is either <strong>INACTIVE</strong> or Unauthorized in Database.</p>
+                </div>
+            `);
+        }
+
+        // --- STEP B: COUNT ACTIVE LEASES FROM TRANSACTIONS TABLE ---
+        let borrowCountResult = await pool.request()
+            .input("student_id", sql.VarChar, student_id)
+            .query("SELECT COUNT(*) AS total_borrowed FROM Transactions WHERE student_id = @student_id AND status = 'issued'");
+
+        const totalBorrowed = borrowCountResult.recordset[0].total_borrowed;
+        console.log(`📊 Live Database Metrics: Student ${student.name} has currently ${totalBorrowed} active transactions.`);
+
+        if (totalBorrowed >= 3) {
+            return res.status(400).send(`
+                <div style="font-family:Arial; text-align:center; padding:40px;">
+                    <h1 style="color:#e74c3c;">❌ Limit Violation</h1>
+                    <p>Constraint breached! You have already borrowed ${totalBorrowed} books according to Transactions Log (Max limit: 3).</p>
+                </div>
+            `);
+        }
+
+        // Fetch book data to check physical shelf status
         let result = await pool.request()
             .input("id", sql.VarChar, book_id)
             .query("SELECT * FROM Book2 WHERE id = @id");
 
         const book = result.recordset[0];
 
-        // Validation 1: Check Book existence
         if (!book) {
             return res.status(404).send(`
                 <div style="font-family:Arial; text-align:center; padding:40px;">
@@ -584,59 +985,55 @@ app.get('/:action/:book_id', async (req, res) => {
             `);
         }
 
-        // Validation 2: Check Book availability state
         if (book.status !== "available") {
             return res.status(400).send(`
                 <div style="font-family:Arial; text-align:center; padding:40px;">
                     <h1 style="color:#e74c3c;">❌ Concurrency Collision</h1>
-                    <p>The requested book asset signature is currently locked. State is already issued to another user.</p>
+                    <p>The requested book asset signature is under active lease. State is already issued to another user.</p>
                 </div>
             `);
         }
 
-        // Step C: Commit Phase Processing & Logging Updates
+        // --- STEP C: COMMIT PHASE ---
         const generatedTransactionID = 'TXN-' + crypto.randomBytes(5).toString('hex').toUpperCase();
         const issueDate = new Date();
         const dueDate = new Date();
-        dueDate.setDate(issueDate.getDate() + 14);
+        dueDate.setDate(issueDate.getDate() + 14); 
+        const formattedDueDate = dueDate.toISOString().slice(0, 10); // Format: YYYY-MM-DD
 
-        // Update SQL Server record matching table schema configuration definitions
+        // Query 1: Update Book2 status on shelf
         await pool.request()
             .input("id", sql.VarChar, book_id)
-            .input("student", sql.VarChar, student_id)
             .query(`
                 UPDATE Book2
-                SET status='issued', borrower=@student, borrow_count = borrow_count + 1
+                SET status='issued', borrow_count = borrow_count + 1
                 WHERE id=@id
             `);
 
-        // Sync count mapping parameter locally
-        student.borrowed_count++;
+        // Query 2: Insert row data directly inside 'Transactions' table
+        await pool.request()
+            .input("txn_id", sql.VarChar, generatedTransactionID)
+            .input("student_id", sql.VarChar, student_id)
+            .input("book_id", sql.VarChar, book_id)
+            .input("due_date", sql.VarChar, formattedDueDate)
+            .query(`
+                INSERT INTO Transactions (transaction_id, student_id, book_id, due_date, status)
+                VALUES (@txn_id, @student_id, @book_id, @due_date, 'issued')
+            `);
 
-        // Cache historical state register metrics node element
-        const archiveNodeElement = {
-            transaction_id: generatedTransactionID,
-            student_id: student_id,
-            book_id: book_id,
-            title: book.title, 
-            issued_date: issueDate.toLocaleString(),
-            due_date: dueDate.toLocaleDateString()
-        };
-        staticTransactionsArchive.push(archiveNodeElement);
-        console.log(`📦 Database updated! State Registered Successfully! Txn Logged: ${generatedTransactionID}`);
+        console.log(`📦 SQL Server Permanent Records Saved! New Txn Row Written: ${generatedTransactionID}`);
 
-        // Return clean success response receipt HTML block to viewport
         return res.status(200).send(`
             <div style="text-align:center; font-family:'Segoe UI',Arial; padding:50px; background:#f4f7f6; min-height:100vh; margin:0;">
                 <div style="background:white; padding:40px; border-radius:12px; display:inline-block; box-shadow:0 10px 30px rgba(0,0,0,0.08); max-width:450px; border-top: 8px solid #0f5a6e;">
                     <h1 style="color:#2ecc71; margin-top:0;">✅ Digital Book Issued</h1>
-                    <p style="color:#666; font-size:14px;">Sir Syed University Smart Library automated system transaction processed safely without manual worker intervention loops.</p>
+                    <p style="color:#666; font-size:14px;">Sir Syed University Smart Library automated system transaction processed safely and saved permanently to Transactions Register.</p>
                     <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
                     <div style="text-align:left; font-size:15px; color:#333; line-height:2;">
                         <strong>Transaction ID:</strong> <span style="font-family:monospace; background:#e9ecef; padding:2px 6px; border-radius:4px;">${generatedTransactionID}</span><br>
                         <strong>Student Name:</strong> ${student.name}<br>
                         <strong>Book Title:</strong> ${book.title}<br>
-                        <strong>Due Date Allocation:</strong> <span style="color:#e74c3c; font-weight:bold;">${dueDate.toLocaleDateString()}</span>
+                        <strong>Due Date Allocation:</strong> <span style="color:#e74c3c; font-weight:bold;">${formattedDueDate}</span>
                     </div>
                 </div>
             </div>
@@ -648,7 +1045,7 @@ app.get('/:action/:book_id', async (req, res) => {
     }
 });
 
-// Clear Listener Registry Core App Entry
+// Server Initialization
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
 });
