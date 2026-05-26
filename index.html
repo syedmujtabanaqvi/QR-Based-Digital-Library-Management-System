@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSUET Smart Library - Static Core Portal</title>
+    
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --primary-color: #0f5a6e;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* 1. Secure Authentication Grid Framework */
+        .auth-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--primary-color);
+        }
+        .auth-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+        }
+        .auth-card h2 { margin: 0 0 10px 0; color: var(--primary-color); text-align: center; font-weight: 700; }
+        .auth-card p { color: #666; font-size: 13px; text-align: center; margin-bottom: 25px; }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        .btn-core {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .btn-core:hover { background-color: #0a4352; }
+        .error-alert { color: var(--error-color); text-align: center; margin-top: 10px; font-size: 14px; font-weight: 500; }
+
+        /* 2. Main Student Dashboard Panel */
+        .portal-layout { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .portal-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .portal-header h2 { margin: 0; font-size: 20px; }
+        .session-badge { background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 4px; font-weight: 500; font-size: 14px; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 25px; margin-top: 25px; }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .content-panel { background: var(--card-bg); padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .content-panel h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #f0f4f5; padding-bottom: 10px; }
+
+        /* QR Generator Simulation Box */
+        .qr-render-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            margin-top: 15px;
+            background: #fafafa;
+        }
+        .qr-placeholder-img { max-width: 180px; height: auto; display: none; }
+
+        /* Scanner Frame Layout */
+        .lens-frame { border: 2px solid #ddd; border-radius: 6px; overflow: hidden; margin-top: 15px; background: #000; }
+        .system-banner { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; background: #e9ecef; font-size: 13px; }
+        .system-banner.success { background: #d4edda; color: #155724; }
+        .system-banner.error { background: #f8d7da; color: #721c24; }
+        .system-banner.loading { background: #fff3cd; color: #856404; }
+
+        /* Transaction Log View Elements */
+        .transaction-log-container { margin-top: 20px; }
+        .log-row {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary-color);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log-row h4 { margin: 0 0 5px 0; font-size: 14px; }
+        .log-row p { margin: 0; font-size: 11px; color: #777; }
+        .badge-due { font-size: 12px; font-weight: bold; color: var(--error-color); }
+    </style>
+</head>
+<body>
+
+    <div id="view-auth" class="auth-wrapper">
+        <div class="auth-card">
+            <h2>SSUET Library Core</h2>
+            <p>Static Validation Environment Assignment Module</p>
+            <input type="text" id="input-student-id" placeholder="Enter Roll Number (e.g., CS-2023-001)" class="form-control">
+            <button id="btn-login-trigger" class="btn-core">Run Session Authentication</button>
+            <div id="auth-error-log" class="error-alert"></div>
+        </div>
+    </div>
+
+    <div id="view-portal" class="portal-layout" style="display: none;">
+        <header class="portal-header">
+            <h2>SSUET Smart Library Automation</h2>
+            <div id="ui-session-badge" class="session-badge">ID: Loaded</div>
+        </header>
+
+        <div class="dashboard-grid">
+            
+            <div class="content-panel">
+                <h3>QR Compiler Sandbox</h3>
+                <p style="font-size: 12px; color: #666;">Select book token parameters to generate live QR mock URLs.</p>
+                
+                <label style="font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px;">Select Book Matrix Title:</label>
+                <select id="select-book-token" class="form-control">
+                    <option value="BOOK-QR-001">Introduction to JavaScript (BOOK-QR-001)</option>
+                    <option value="BOOK-QR-002">Database Management Systems (BOOK-QR-002)</option>
+                    <option value="BOOK-QR-003">Data Structures & Algorithms (BOOK-QR-003)</option>
+                    <option value="BOOK-QR-099">Invalid Book Component Token (BOOK-QR-099)</option>
+                </select>
+                
+                <button id="btn-compile-qr" class="btn-core" style="background:#2c3e50;">Plot Text Stream Matrix</button>
+                
+                <div class="qr-render-area">
+                    <div id="text-qr-state" style="color: #999; font-size: 13px;">Awaiting Pipeline Stream Command</div>
+                    <img id="img-qr-target" src="" alt="Live Generated QR Token" class="qr-placeholder-img">
+                </div>
+            </div>
+
+            <div class="content-panel">
+                <h3>Hardware Capturing Interface</h3>
+                <div class="lens-frame">
+                    <div id="camera-lens-viewport"></div>
+                </div>
+                <div id="runtime-system-status" class="system-banner">Awaiting Device Driver Activation...</div>
+
+                <h3 style="margin-top: 30px;">Permanent Active Records Logs</h3>
+                <p style="font-size: 11px; color:#888; margin-top:-10px;">Old transaction logs never deleted rule is enforced globally.</p>
+                <div id="registry-historical-list" class="transaction-log-container">
+                    <p id="text-empty-registry" style="color: #999; font-size: 13px; text-align: center;">No active borrowed books registered inside virtual matrix memory space.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- MEMORY ARCHITECTURE DATA MATRICES (MOCK DATABASE) ---
+        const staticStudentsTable = {
+            "CS-2023-001": { name: "Syed Mujtaba Ali", is_active: true, borrowed_count: 8 },
+            "CS-2023-002": { name: "Bilal Ahmed Khan", is_active: true, borrowed_count: 3 }, // Max limit violation testing element
+            "CS-2023-003": { name: "Zainab Fatima", is_active: false, borrowed_count: 0 }    // Inactive status check testing element
+        };
+
+        const staticBooksTable = {
+            "BOOK-QR-001": { title: "Introduction to JavaScript", status: "available" },
+            "BOOK-QR-002": { title: "Database Management Systems", status: "available" },
+            "BOOK-QR-003": { title: "Data Structures & Algorithms", status: "available" }
+        };
+
+        // Complete array stack maintaining the objective "Records must never be deleted"
+        const staticTransactionsArchive = [];
+
+        let currentActiveUserSessionKey = "";
+
+        // --- CONTROLLER 1: AUTHENTICATION MODULE LAYER ---
+        document.getElementById('btn-login-trigger').addEventListener('click', () => {
+            const userIdToken = document.getElementById('input-student-id').value.trim();
+            const logBox = document.getElementById('auth-error-log');
+
+            if(!userIdToken) {
+                logBox.innerText = "Error execution: Identity parameter cannot be null.";
+                return;
+            }
+
+            // Verify Student Eligibility Matrix Status Bound
+            if(staticStudentsTable[userIdToken]) {
+                currentActiveUserSessionKey = userIdToken;
+                
+                // Transition interface state panels
+                document.getElementById('view-auth').style.display = 'none';
+                document.getElementById('view-portal').style.display = 'block';
+                document.getElementById('ui-session-badge').innerText = `User: ${staticStudentsTable[userIdToken].name} (${currentActiveUserSessionKey})`;
+
+                // Trigger Camera Tracking Stream Lifecycle
+                initializeHardwareLensScanner();
+            } else {
+                logBox.innerText = "Access Denied: Record signature not found in University Database Registry.";
+            }
+        });
+
+        // --- CONTROLLER 2: SANDBOX GENERATOR DATA ROUTE ---
+        document.getElementById('btn-compile-qr').addEventListener('click', () => {
+            const selectedBook = document.getElementById('select-book-token').value;
+            const stateLabel = document.getElementById('text-qr-state');
+            const targetImg = document.getElementById('img-qr-target');
+
+            stateLabel.innerText = "Compiling token data pipeline...";
+            targetImg.style.display = "none";
+
+            // Encapsulates parameters inside string schema link mapping
+  // Ab yeh direct aapke backend (BACKEND_BASE_URL) yaani aapke IP address ka link banayega
+const compiledPayloadLink = `${BACKEND_BASE_URL}/issue/${selectedBook}?student_id=${currentActiveUserSessionKey}`;
+            
+            // Calls automated public QR compiler generator API layout instance matching your matrix requirements
+            targetImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(compiledPayloadLink)}`;
+            
+            targetImg.onload = () => {
+                stateLabel.style.display = "none";
+                targetImg.style.display = "block";
+            };
+        });
+
+        // --- CONTROLLER 3: HARDWARE CAPTURING AND BUSINESS VALIDATION CRITERIA LOOP ---
+        function initializeHardwareLensScanner() {
+            let cameraDriver = new Html5QrcodeScanner("camera-lens-viewport", { 
+                fps: 15, 
+                qrbox: { width: 200, height: 200 }
+            });
+            cameraDriver.render(onTargetCodeDecodedPlaneIntersects, onTrackingFrameScanIterationMiss);
+        }
+
+        function onTargetCodeDecodedPlaneIntersects(scannedTextPayloadString) {
+            const statusUIBanner = document.getElementById('runtime-system-status');
+            statusUIBanner.className = "system-banner loading";
+            statusUIBanner.innerText = "Decoding URL Schema Bounds Matrix...";
+
+            try {
+                // Parse out url properties parameters strings safely using native parser rules
+                let urlContextAnalyzer = new URL(scannedTextPayloadString);
+                let pathsArray = urlContextAnalyzer.pathname.split('/');
+                
+                let extractedBookId = pathsArray[pathsArray.length - 1]; // Pulls book id
+                let extractedStudentId = urlContextAnalyzer.searchParams.get("student_id"); // Pulls student parameter
+
+                // Execute constraints system validation logic checking
+                processDigitalIssuanceTransaction(extractedStudentId, extractedBookId);
+
+            } catch (err) {
+                statusUIBanner.className = "system-banner error";
+                statusUIBanner.innerText = "⚠️ External Fault: Decoded string does not contain valid SSUET URL schema tokens.";
+            }
+        }
+
+        function processDigitalIssuanceTransaction(studentId, bookId) {
+            const statusUIBanner = document.getElementById('runtime-system-status');
+            
+            // 1. Rule Check: Only active students can borrow
+            let studentRecord = staticStudentsTable[studentId];
+            if(!studentRecord || !studentRecord.is_active) {
+                statusUIBanner.className = "system-banner error";
+                statusUIBanner.innerText = "❌ Security Alert: Student registration profile is INACTIVE or unauthorized.";
+                return;
+            }
+
+            // 2. Rule Check: Borrowing limits tracking check (Max 3 books rules)
+            if(studentRecord.borrowed_count >= 3) {
+                statusUIBanner.className = "system-banner error";
+                statusUIBanner.innerText = "❌ Transaction Blocked: Student profile reached maximum capacity limits allocation bounds (Max 3).";
+                return;
+            }
+
+            // 3. Rule Check: Book verification status constraints inventory bounds
+            let bookRecord = staticBooksTable[bookId];
+            if(!bookRecord) {
+                statusUIBanner.className = "system-banner error";
+                statusUIBanner.innerText = "❌ Registry Fault: Asset reference matching code target not found inside library catalog matrix.";
+                return;
+            }
+            if(bookRecord.status !== "available") {
+                statusUIBanner.className = "system-banner error";
+                statusUIBanner.innerText = "❌ Concurrency Violation: Book asset token currently locked. Active state is ISSUED to another instance pointer.";
+                return;
+            }
+
+            // --- EXECUTION PHASE: ALL RULES CLEAR (COMMIT PHASE TO VIRTUAL ARCHIVE SYSTEM) ---
+            const uniqueTxnIdentifier = "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            
+            let currentTimestampDate = new Date();
+            let returnBoundsDate = new Date();
+            returnBoundsDate.setDate(currentTimestampDate.getDate() + 14); // 14 days rule metric assignment
+
+            // Update Database Registry Objects In Memory Space
+            bookRecord.status = "issued";
+            studentRecord.borrowed_count++;
+
+            // Create Permanent Historical Transaction Log Ledger Unit
+            const transactionRecordNode = {
+                txn_id: uniqueTxnIdentifier,
+                student_id: studentId,
+                book_id: bookId,
+                book_name: bookRecord.title,
+                issued_at: currentTimestampDate.toLocaleString(),
+                due_at: returnBoundsDate.toLocaleDateString()
+            };
+
+            staticTransactionsArchive.push(transactionRecordNode);
+
+            // Re-render System View Component Structure Data
+            updateHistoricalLogsListView();
+
+            statusUIBanner.className = "system-banner success";
+            statusUIBanner.innerHTML = `✅ Successfully Issued!<br>Txn ID: ${uniqueTxnIdentifier}<br>Title: ${bookRecord.title}`;
+        }
+
+        function updateHistoricalLogsListView() {
+            const recordsWrapper = document.getElementById('registry-historical-list');
+            const emptyLabel = document.getElementById('text-empty-registry');
+
+            if(emptyLabel) emptyLabel.style.display = "none";
+            recordsWrapper.innerHTML = ""; // Wipe view pointer block container list
+
+            // Map and layout loop trace all items matching historical permanent store array pipeline values
+            staticTransactionsArchive.forEach(item => {
+                const logRowElement = document.createElement('div');
+                logRowElement.className = "log-row";
+                logRowElement.innerHTML = `
+                    <div>
+                        <h4>${item.book_name}</h4>
+                        <p>Txn Signature: <strong>${item.txn_id}</strong> | Code: ${item.book_id}</p>
+                        <p style="color:#0f5a6e; font-size:10px;">Time logged: ${item.issued_at}</p>
+                    </div>
+                    <div>
+                        <span class="badge-due">Due: ${item.due_at}</span>
+                    </div>
+                `;
+                recordsWrapper.appendChild(logRowElement);
+            });
+        }
+
+        function onTrackingFrameScanIterationMiss(errorLogTracingString) {
+            // Processing execution pool loop pipeline monitoring metrics capture frames
+        }
+        const BACKEND_BASE_URL = "http://192.168.100.6:5000";
+    </script>
+</body>
+</html>
