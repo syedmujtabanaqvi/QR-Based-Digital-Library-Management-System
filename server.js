@@ -96,7 +96,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
-
+const sql = require("mssql");
+const config = require("./dbConfig");
 const app = express();
 app.use(express.json());
 app.use(cors()); 
@@ -118,6 +119,20 @@ const staticBooksTable = {
 
 const staticTransactionsArchive = [];
 const loginLogTable = []; 
+
+
+app.get("/r",async (req,res)=>{
+try{
+let pool = await sql.connect(config);
+let result = await pool.request().query('select * from  LoginLog')
+
+      return res.json(result.recordset);
+
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+
+})
 
 app.post('/api/login', (req, res) => {
     const { student_id } = req.body;
@@ -242,7 +257,12 @@ app.get('/:action/:book_id', (req, res) => {
     `);
 });
 
-app.listen(NODE_PORT, NODE_SERVER_IP, () => {
-    console.log(`\n🚀 SSUET Smart Library Static Backend Engine Online!`);
-    console.log(`🔗 Local Endpoint API Access Hub: http://localhost:${NODE_PORT}`);
+// app.listen(NODE_PORT, NODE_SERVER_IP, () => {
+//     console.log(`\n🚀 SSUET Smart Library Static Backend Engine Online!`);
+//     console.log(`🔗 Local Endpoint API Access Hub: http://localhost:${NODE_PORT}`);
+// });
+
+
+app.listen(5000, () => {
+    console.log("Server running on http://localhost:5000");
 });
