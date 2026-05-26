@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SSUET Smart Library Management System (Assignment 3)
 
 Automated QR circulation application tailored for Sir-Syed University Computer Science & IT Department constraints using Flask and MS SQL Server.
@@ -12,3 +13,7 @@ Automated QR circulation application tailored for Sir-Syed University Computer S
 1. Install extensions:
    ```bash
    pip install flask flask-sqlalchemy pyodbc qrcode pillow
+=======
+# QR-Based-Digital-Library-Management-System
+QR-Based Digital Library Management System is a smart library solution where students issue books by scanning QR codes. The system checks student eligibility, book availability, borrowing limits, and generates transaction IDs automatically while maintaining permanent issue records.
+>>>>>>> 660092328b088c0a4604c7629ad2092191fafef3

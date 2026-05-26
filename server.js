@@ -91,23 +91,23 @@
 // });
 
 
+
+
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); // Isse aapka HTML front-end kisi bhi device se connect ho sakega
+app.use(cors()); 
 
-// Network configuration parameters mapping matrix
-const NODE_SERVER_IP = "0.0.0.0"; // Listen on all network adapters for mobile access
+const NODE_SERVER_IP = "0.0.0.0"; 
 const NODE_PORT = 5000;
 
-// --- 1. MEMORY ARCHITECTURE DATA STORE (STATIC MOCK TABLES) ---
 const staticStudentsTable = {
     "CS-2023-001": { name: "Syed Mujtaba Ali", is_active: true, borrowed_count: 0 },
-    "CS-2023-002": { name: "Bilal Ahmed Khan", is_active: true, borrowed_count: 3 }, // Limit test: Pehle se 3 books hain
-    "CS-2023-003": { name: "Zainab Fatima", is_active: false, borrowed_count: 0 }    // Eligibility test: Inactive student
+    "CS-2023-002": { name: "Bilal Ahmed Khan", is_active: true, borrowed_count: 3 }, 
+    "CS-2023-003": { name: "Zainab Fatima", is_active: false, borrowed_count: 0 }    
 };
 
 const staticBooksTable = {
@@ -116,11 +116,9 @@ const staticBooksTable = {
     "BOOK-QR-003": { title: "Data Structures & Algorithms", status: "available" }
 };
 
-// Permanent History Archive Array - No delete routes or functions exist
 const staticTransactionsArchive = [];
-const loginLogTable = []; // Aapka current user check-in logger table
+const loginLogTable = []; 
 
-// --- 2. AUTHENTICATION MODULE ENDPOINT ---
 app.post('/api/login', (req, res) => {
     const { student_id } = req.body;
 
@@ -128,9 +126,7 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ success: false, message: "Error: Student ID missing!" });
     }
 
-    // Check if student exists in our master library records
     if (staticStudentsTable[student_id]) {
-        // Log into memory array registry
         loginLogTable.push({ id: loginLogTable.length + 1, student_id: student_id });
         console.log(`🔑 Login Logged: Student ${student_id} successfully authenticated.`);
         
@@ -144,7 +140,6 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// --- 3. DYNAMIC QR CODE MATRIX BASE64 GENERATOR ---
 app.get('/api/generate_qr', (req, res) => {
     const { book_id, student_id, action } = req.query;
     const currentAction = action || "issue";
@@ -153,35 +148,26 @@ app.get('/api/generate_qr', (req, res) => {
         return res.status(400).json({ success: false, message: "Parameters arrays missing!" });
     }
 
-    // Compile dynamic target URL parameter structure
-    // Mobile browsers target link configuration matching your network matrix
-  // Ismein '192.168.100.6' ki jagah apna wo asli IPv4 address likhein jo aapne CMD se nikala hai
 const target_url = `http://192.168.100.6:${NODE_PORT}/${currentAction}/${book_id}?student_id=${student_id}`;
     console.log(`🎯 Generated Matrix Link Vector: ${target_url}`);
 
-    // Frontend handles generation, returning structural success parameters response token
     return res.status(200).json({
         success: true,
         target_payload: target_url,
-        // Frontend uses public pipeline generator, backend validates endpoints routing
         image_data: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(target_url)}`
     });
 });
 
-// --- 4. BUSINESS LOGIC ENGINE & VERIFICATION ROUTE ---
-// Matches the compiled URL query string map pipeline rules: /issue/:book_id?student_id=...
 app.get('/:action/:book_id', (req, res) => {
     const { action, book_id } = req.params;
     const { student_id } = req.query;
 
-    // Enforce strict workflow rule bounds validation
     if (action !== 'issue') {
         return res.status(400).send(`<h1>❌ Error: Invalid System Operation Parameter!</h1>`);
     }
 
     console.log(`⚡ Execution Pipeline Triggered: Processing book ${book_id} for student ${student_id}`);
 
-    // OBJECTIVE 5: Borrowing Limit Validation & Student Eligibility Status Tracking
     const student = staticStudentsTable[student_id];
     if (!student || !student.is_active) {
         return res.status(403).send(`
@@ -200,8 +186,6 @@ app.get('/:action/:book_id', (req, res) => {
             </div>
         `);
     }
-
-    // OBJECTIVE 4: Book Issuing Logic & Availability Guard
     const book = staticBooksTable[book_id];
     if (!book) {
         return res.status(404).send(`
@@ -220,21 +204,15 @@ app.get('/:action/:book_id', (req, res) => {
             </div>
         `);
     }
-
-    // --- 5. COMMIT PHASE: ALL BUSINESS CONSTRAINTS VERIFIED ---
-    // Objective 6: Transaction Management - Unique Identifier String Production Matrix
     const generatedTransactionID = 'TXN-' + crypto.randomBytes(5).toString('hex').toUpperCase();
     
-    // Evaluate timestamps rules bounds calculations vector parameters variables (+14 Days)
     const issueDate = new Date();
     const dueDate = new Date();
     dueDate.setDate(issueDate.getDate() + 14);
 
-    // Write modifications states parameters to static references memory arrays registers
     book.status = 'issued';
     student.borrowed_count++;
 
-    // Objective 6 & 7: Permanent Storage Ledger Logging Pipeline
     const archiveNodeElement = {
         transaction_id: generatedTransactionID,
         student_id: student_id,
@@ -247,7 +225,6 @@ app.get('/:action/:book_id', (req, res) => {
     staticTransactionsArchive.push(archiveNodeElement);
     console.log(`📦 System State Registered Successfully! Txn Logged: ${generatedTransactionID}`);
 
-    // Send rendered rich UI layout text block direct response vector stream straight to mobile interface viewport
     return res.status(200).send(`
         <div style="text-align:center; font-family:'Segoe UI',Arial; padding:50px; background:#f4f7f6; min-height:100vh; margin:0;">
             <div style="background:white; padding:40px; border-radius:12px; display:inline-block; box-shadow:0 10px 30px rgba(0,0,0,0.08); max-width:450px; border-top: 8px solid #0f5a6e;">
@@ -265,7 +242,6 @@ app.get('/:action/:book_id', (req, res) => {
     `);
 });
 
-// Start Server Core Runtime Loop Listener
 app.listen(NODE_PORT, NODE_SERVER_IP, () => {
     console.log(`\n🚀 SSUET Smart Library Static Backend Engine Online!`);
     console.log(`🔗 Local Endpoint API Access Hub: http://localhost:${NODE_PORT}`);
