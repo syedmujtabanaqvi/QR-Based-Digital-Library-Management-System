@@ -863,6 +863,55 @@ app.get("/api/books", async (req, res) => {
     }
 });
 
+// --- ADMIN CONTROL API 1: GET ALL HISTORICAL TRANSACTIONS ---
+app.get('/api/admin/transactions', async (req, res) => {
+    try {
+        let pool = await sql.connect(config);
+        // Poore transactions table ka data reverse order (latest first) mein nikalenge
+        let result = await pool.request().query("SELECT * FROM Transactions ORDER BY id DESC");
+        
+        return res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- ADMIN CONTROL API 2: REVERSE CORE LEASE (RETURN BOOK OPERATION - FIXED) ---
+app.post('/api/admin/return', async (req, res) => {
+    const { transaction_id, book_id } = req.body;
+
+    if (!transaction_id || !book_id) {
+        return res.status(400).json({ success: false, message: "Parameters context tokens missing!" });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+
+        // 1. Transactions table mein status ko 'issued' se 'returned' kar dein
+        await pool.request()
+            .input("txn_id", sql.VarChar, transaction_id)
+            .query("UPDATE Transactions SET status = 'returned' WHERE transaction_id = @txn_id");
+
+        // ✅ FIXED QUERY: Book2 table se 'borrower = NULL' hata diya kyunki ye column ab nahi hai
+        await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query("UPDATE Book2 SET status = 'available' WHERE id = @book_id");
+
+        console.log(`🔄 Admin Operation: Book ${book_id} returned successfully. Txn Settled: ${transaction_id}`);
+        
+        return res.json({
+            success: true,
+            message: "Asset state reverted and synchronized safely inside database cluster!"
+        });
+
+    } catch (err) {
+        console.error("Admin Return Error: ", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
 // 3. Dynamic Student Login Auth Module (100% DB Driven)
 app.post('/api/login', async (req, res) => {
     const { student_id } = req.body;
@@ -1042,6 +1091,45 @@ app.get('/:action/:book_id', async (req, res) => {
     } catch (err) {
         console.error("SQL Processing Exception: ", err);
         return res.status(500).send(`<h1>Database Transaction Error: ${err.message}</h1>`);
+    }
+});
+
+
+// --- ADMIN DATABASE-DRIVEN LOGIN AUTHENTICATION ENDPOINT ---
+app.post('/api/admin/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: "Username or Password parameters missing!" });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+        
+        // SQL Injection-safe query matching username and password from database
+        let result = await pool.request()
+            .input("username", sql.VarChar, username)
+            .input("password", sql.VarChar, password)
+            .query("SELECT * FROM AdminUser WHERE username = @username AND password = @password");
+
+        const admin = result.recordset[0];
+
+        if (admin) {
+            console.log(`🛡️ Admin Session Authenticated: '${username}' logged in successfully.`);
+            return res.json({
+                success: true,
+                message: "Admin verification cleared safely from database matrix cluster!"
+            });
+        } else {
+            return res.status(401).json({
+                success: false,
+                message: "❌ Access Denied: Invalid Username or Password record signatures."
+            });
+        }
+
+    } catch (err) {
+        console.error("Admin Auth Cluster Error: ", err);
+        return res.status(500).json({ success: false, message: err.message });
     }
 });
 
