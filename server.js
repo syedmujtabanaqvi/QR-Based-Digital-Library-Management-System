@@ -13,7 +13,6 @@ const NODE_PORT = 5000;
 const staticTransactionsArchive = [];
 const loginLogTable = []; 
 
-// 1. Get Login Logs from DB
 app.get("/r", async (req, res) => {
     try {
         let pool = await sql.connect(config);
@@ -24,11 +23,9 @@ app.get("/r", async (req, res) => {
     }
 });
 
-// 2. Get All Books from DB table 'Book2' (FIXED: Out of stock books bhi dropdown mein aayengi)
 app.get("/api/books", async (req, res) => {
     try {
         let pool = await sql.connect(config);
-        // ✅ FIXED: Filter hata diya taake saari library inventory dropdown mein show ho ske
         let result = await pool.request().query("SELECT * FROM Book2");
 
         res.json({
@@ -43,7 +40,6 @@ app.get("/api/books", async (req, res) => {
     }
 });
 
-// --- ADMIN CONTROL API 1: GET ALL HISTORICAL TRANSACTIONS ---
 app.get('/api/admin/transactions', async (req, res) => {
     try {
         let pool = await sql.connect(config);
@@ -58,7 +54,6 @@ app.get('/api/admin/transactions', async (req, res) => {
     }
 });
 
-// --- ADMIN CONTROL API 2: REVERSE CORE LEASE (RETURN BOOK OPERATION) ---
 app.post('/api/admin/return', async (req, res) => {
     const { transaction_id, book_id } = req.body;
 
@@ -69,12 +64,10 @@ app.post('/api/admin/return', async (req, res) => {
     try {
         let pool = await sql.connect(config);
 
-        // 1. Transactions table mein status ko 'issued' se 'returned' kar dein
         await pool.request()
             .input("txn_id", sql.VarChar, transaction_id)
             .query("UPDATE Transactions SET status = 'returned' WHERE transaction_id = @txn_id");
 
-        // 2. Book2 table mein available_quantity barha dein aur status 'available' set kardein
         await pool.request()
             .input("book_id", sql.VarChar, book_id)
             .query("UPDATE Book2 SET available_quantity = available_quantity + 1, status = 'available' WHERE id = @book_id");
@@ -92,7 +85,6 @@ app.post('/api/admin/return', async (req, res) => {
     }
 });
 
-// 3. Dynamic Student Login Auth Module (100% DB Driven)
 app.post('/api/login', async (req, res) => {
     const { student_id } = req.body;
 
@@ -130,7 +122,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// 4. Generate QR Payload Link
 app.get('/api/generate_qr', (req, res) => {
     const { book_id, student_id, action } = req.query;
     const currentAction = action || "issue";
@@ -149,7 +140,6 @@ app.get('/api/generate_qr', (req, res) => {
     });
 });
 
-// 5. Core Unified Business Logic & DB Book Issuance Controller
 app.get('/:action/:book_id', async (req, res) => {
     const { action, book_id } = req.params;
     const { student_id } = req.query;
@@ -163,7 +153,6 @@ app.get('/:action/:book_id', async (req, res) => {
     try {
         let pool = await sql.connect(config);
 
-        // --- STEP A: DYNAMIC STUDENT ELIGIBILITY CHECK FROM DB ---
         let studentCheckResult = await pool.request()
             .input("student_id", sql.VarChar, student_id)
             .query("SELECT * FROM Student WHERE student_id = @student_id");
@@ -179,7 +168,6 @@ app.get('/:action/:book_id', async (req, res) => {
             `);
         }
 
-        // --- STEP B: COUNT ACTIVE LEASES FROM TRANSACTIONS TABLE ---
         let borrowCountResult = await pool.request()
             .input("student_id", sql.VarChar, student_id)
             .query("SELECT COUNT(*) AS total_borrowed FROM Transactions WHERE student_id = @student_id AND status = 'issued'");
@@ -196,7 +184,6 @@ app.get('/:action/:book_id', async (req, res) => {
             `);
         }
 
-        // Fetch book data to check physical shelf status
         let result = await pool.request()
             .input("id", sql.VarChar, book_id)
             .query("SELECT * FROM Book2 WHERE id = @id");
@@ -212,7 +199,6 @@ app.get('/:action/:book_id', async (req, res) => {
             `);
         }
 
-        // Validation: Ab quantity check dynamic karega stock management rules par
         if (book.available_quantity <= 0) {
             return res.status(400).send(`
                 <div style="font-family:Arial; text-align:center; padding:40px;">
@@ -222,7 +208,6 @@ app.get('/:action/:book_id', async (req, res) => {
             `);
         }
 
-        // --- STEP C: COMMIT PHASE ---
         const generatedTransactionID = 'TXN-' + crypto.randomBytes(5).toString('hex').toUpperCase();
         const issueDate = new Date();
         const dueDate = new Date();
@@ -335,13 +320,11 @@ app.get("/api/student/borrow-count/:student_id", async (req, res) => {
     }
 });
 
-
-// 1. GET ALL BOOKS: Taake Admin Catalog Table mein data refresh ho sake
 app.get('/api/admin/books', async (req, res) => {
     try {
         let pool = await sql.connect(config);
-        // Database query jo saare data rows pull karegi
-        let result = await pool.request().query("SELECT id AS id,quantity, title, available_quantity FROM Book2");
+        
+        let result = await pool.request().query("SELECT id AS book_id, title, borrow_count FROM Book2");
         
         return res.json({
             success: true,
@@ -352,37 +335,34 @@ app.get('/api/admin/books', async (req, res) => {
     }
 });
 
-// 2. ADD A NEW BOOK: Form submit hone par database mein record insert karega
 app.post('/api/admin/books/add', async (req, res) => {
-    const { book_id, title, author } = req.body;
+    const { book_id, title, quantity } = req.body; 
 
-    if (!book_id || !title || !author) {
+    if (!book_id || !title || !quantity) {
         return res.status(400).json({ success: false, message: "Required parameter attributes missing!" });
     }
 
     try {
         let pool = await sql.connect(config);
 
-        // Primary key check verification loop
         let checkExist = await pool.request()
-            .input("book_id", sql.VarChar, book_id)
-            .query("SELECT * FROM Book2 WHERE id = @book_id");
+            .input("id", sql.VarChar, book_id)
+            .query("SELECT * FROM Book2 WHERE id = @id");
 
         if (checkExist.recordset.length > 0) {
             return res.status(400).json({ success: false, message: "Book ID already exists in database registry!" });
         }
 
-        // Insert Statement with dynamic quantity mapping
         await pool.request()
-            .input("book_id", sql.VarChar, book_id)
+            .input("id", sql.VarChar, book_id)
             .input("title", sql.VarChar, title)
-            .input("author", sql.VarChar, author)
+            .input("qty", sql.Int, quantity) // Integer pass kiya
             .query(`
-                INSERT INTO Book2 (id, title, author, status, borrow_count, quantity, available_quantity) 
-                VALUES (@book_id, @title, @author, 'available', 0, 1, 1)
+                INSERT INTO Book2 (id, title, status, borrow_count) 
+                VALUES (@id, @title, 'available', @qty)
             `);
 
-        console.log(`➕ Added to Catalog: ${book_id}`);
+        console.log(`➕ Added to Catalog: ${book_id} with Quantity: ${quantity}`);
         return res.json({ success: true, message: "New book record written to DB cluster successfully!" });
 
     } catch (err) {
@@ -390,8 +370,6 @@ app.post('/api/admin/books/add', async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 });
-
-// 3. DELETE A BOOK: Catalog list se book remove karne ke liye
 app.post('/api/admin/books/delete', async (req, res) => {
     const { book_id } = req.body;
 
@@ -402,10 +380,9 @@ app.post('/api/admin/books/delete', async (req, res) => {
     try {
         let pool = await sql.connect(config);
 
-        // Security check: kahin book kisi student ko issued to nahi hai?
         let activeLeaseCheck = await pool.request()
-            .input("book_id", sql.VarChar, book_id)
-            .query("SELECT * FROM Transactions WHERE book_id = @book_id AND status = 'issued'");
+            .input("id", sql.VarChar, book_id) 
+            .query("SELECT * FROM Transactions WHERE book_id = @id AND status = 'issued'");
 
         if (activeLeaseCheck.recordset.length > 0) {
             return res.status(400).json({ 
@@ -414,10 +391,9 @@ app.post('/api/admin/books/delete', async (req, res) => {
             });
         }
 
-        // Execution path logic
         await pool.request()
-            .input("book_id", sql.VarChar, book_id)
-            .query("DELETE FROM Book2 WHERE id = @book_id");
+            .input("id", sql.VarChar, book_id) 
+            .query("DELETE FROM Book2 WHERE id = @id");
 
         console.log(`❌ Purged from Catalog: ${book_id}`);
         return res.json({ success: true, message: "Asset cleared permanently from DB catalog." });
@@ -428,7 +404,6 @@ app.post('/api/admin/books/delete', async (req, res) => {
     }
 });
 
-// Server Initialization
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
 });
