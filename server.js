@@ -335,6 +335,99 @@ app.get("/api/student/borrow-count/:student_id", async (req, res) => {
     }
 });
 
+
+// 1. GET ALL BOOKS: Taake Admin Catalog Table mein data refresh ho sake
+app.get('/api/admin/books', async (req, res) => {
+    try {
+        let pool = await sql.connect(config);
+        // Database query jo saare data rows pull karegi
+        let result = await pool.request().query("SELECT id AS id,quantity, title, available_quantity FROM Book2");
+        
+        return res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// 2. ADD A NEW BOOK: Form submit hone par database mein record insert karega
+app.post('/api/admin/books/add', async (req, res) => {
+    const { book_id, title, author } = req.body;
+
+    if (!book_id || !title || !author) {
+        return res.status(400).json({ success: false, message: "Required parameter attributes missing!" });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+
+        // Primary key check verification loop
+        let checkExist = await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query("SELECT * FROM Book2 WHERE id = @book_id");
+
+        if (checkExist.recordset.length > 0) {
+            return res.status(400).json({ success: false, message: "Book ID already exists in database registry!" });
+        }
+
+        // Insert Statement with dynamic quantity mapping
+        await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .input("title", sql.VarChar, title)
+            .input("author", sql.VarChar, author)
+            .query(`
+                INSERT INTO Book2 (id, title, author, status, borrow_count, quantity, available_quantity) 
+                VALUES (@book_id, @title, @author, 'available', 0, 1, 1)
+            `);
+
+        console.log(`➕ Added to Catalog: ${book_id}`);
+        return res.json({ success: true, message: "New book record written to DB cluster successfully!" });
+
+    } catch (err) {
+        console.error("Add Book Error: ", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// 3. DELETE A BOOK: Catalog list se book remove karne ke liye
+app.post('/api/admin/books/delete', async (req, res) => {
+    const { book_id } = req.body;
+
+    if (!book_id) {
+        return res.status(400).json({ success: false, message: "Book ID reference token missing!" });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+
+        // Security check: kahin book kisi student ko issued to nahi hai?
+        let activeLeaseCheck = await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query("SELECT * FROM Transactions WHERE book_id = @book_id AND status = 'issued'");
+
+        if (activeLeaseCheck.recordset.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Cannot delete asset! This book is currently active in ongoing transactions." 
+            });
+        }
+
+        // Execution path logic
+        await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query("DELETE FROM Book2 WHERE id = @book_id");
+
+        console.log(`❌ Purged from Catalog: ${book_id}`);
+        return res.json({ success: true, message: "Asset cleared permanently from DB catalog." });
+
+    } catch (err) {
+        console.error("Delete Book Error: ", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Server Initialization
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
