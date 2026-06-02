@@ -26,7 +26,6 @@
             color: var(--text-color);
         }
 
-        /* 1. Secure Authentication View Box */
         .auth-wrapper {
             display: flex;
             justify-content: center;
@@ -70,7 +69,6 @@
         .btn-core:hover { background-color: #0a4352; }
         .error-alert { color: var(--error-color); text-align: center; margin-top: 10px; font-size: 14px; font-weight: 500; }
 
-        /* 2. Main Portal Dashboard Grid System */
         .portal-layout { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .portal-header {
             background-color: var(--primary-color);
@@ -107,14 +105,12 @@
         }
         .qr-placeholder-img { max-width: 180px; height: auto; display: none; }
 
-        /* Hardware Webcam Stream Framework */
         .lens-frame { border: 2px solid #ddd; border-radius: 6px; overflow: hidden; margin-top: 15px; background: #000; }
         .system-banner { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; background: #e9ecef; font-size: 13px; }
         .system-banner.success { background: #d4edda; color: #155724; }
         .system-banner.error { background: #f8d7da; color: #721c24; }
         .system-banner.loading { background: #fff3cd; color: #856404; }
 
-        /* DB Real-time Transactions Rows Styling */
         .transaction-log-container { margin-top: 20px; max-height: 350px; overflow-y: auto; }
         .log-row {
             background: #f8f9fa;
@@ -185,13 +181,11 @@
     </div>
 
     <script>
-        // GLOBAL ENDPOINT HOST DECLARED AT THE ABSOLUTE FIRST TOP LEVEL SCOPE
         const BACKEND_BASE_URL = "http://192.168.100.6:5000";
 
         let currentActiveUserSessionKey = "";
         let html5QrcodeScannerInstance = null;
 
-        // --- PART 1: LOGIN SUBMISSION LOOP (PROPERLY CONSUMING BACKEND API) ---
         document.getElementById('btn-login-trigger').addEventListener('click', () => {
             const userIdToken = document.getElementById('input-student-id').value.trim();
             const logBox = document.getElementById('auth-error-log');
@@ -201,7 +195,6 @@
                 return;
             }
 
-            // HIT REALS DATABASE LOGIN API INSTANCE
             fetch(`${BACKEND_BASE_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -212,29 +205,24 @@
                 if(response.success) {
                     currentActiveUserSessionKey = response.student_id;
                     
-                    // Toggle interface views layers
                     document.getElementById('view-auth').style.display = 'none';
                     document.getElementById('view-portal').style.display = 'block';
                     document.getElementById('ui-session-badge').innerText = `User ID: ${currentActiveUserSessionKey}`;
 
-                    // Pull catalog data live from MS SQL database
                     fetchBooksFromDatabase();
                     
-                    // Pull real database dynamic transaction records logs (Yeh automatic update karega counter ko)
                     fetchTransactionsFromDatabase();
 
-                    // Trigger Camera Hardware streaming pipeline thread
                     initializeHardwareLensScanner();
                 } else {
                     logBox.innerText = response.message || "Access Denied: Record signature not found.";
                 }
             })
             .catch(err => {
-                logBox.innerText = "❌ Exception: Node backend server is offline.";
+                logBox.innerText = " Exception: Node backend server is offline.";
             });
         });
 
-        // --- PART 2: DYNAMIC SYNC CATALOG INVENTORY DROPDOWN ---
         function fetchBooksFromDatabase() {
             const dropdown = document.getElementById('select-book-token');
             
@@ -242,7 +230,7 @@
             .then(res => res.json())
             .then(response => {
                 if(response.success && response.data.length > 0) {
-                    dropdown.innerHTML = ""; // Clear loader tag string
+                    dropdown.innerHTML = ""; 
                     
                     response.data.forEach(book => {
                         const option = document.createElement('option');
@@ -259,7 +247,6 @@
             });
         }
 
-        // --- PART 2.5: SYNC REAL DATABASE HISTORICAL TRANSACTION LOGS & UPDATE COUNTER ---
         function fetchTransactionsFromDatabase() {
             const listContainer = document.getElementById('registry-historical-list');
             const countBadge = document.getElementById('ui-borrowed-count');
@@ -267,20 +254,17 @@
             fetch(`${BACKEND_BASE_URL}/r`)
             .then(res => res.json())
             .then(data => {
-                // Filter rows strictly belonging to the currently authenticated user ID session bound
                 const studentTransactions = data.filter(log => log.student_id === currentActiveUserSessionKey);
                 
-                // ✅ LOGIC ADDED: Status 'issued' wali transactions count karo real dynamic count nikalne ke liye
                 const activeIssuedBooks = studentTransactions.filter(log => log.status === 'issued');
                 countBadge.innerText = `Borrowed: ${activeIssuedBooks.length} / 3`;
                 
                 if(studentTransactions.length > 0) {
-                    listContainer.innerHTML = ""; // Wipe empty text
+                    listContainer.innerHTML = ""; 
                     studentTransactions.forEach(log => {
                         const logRow = document.createElement('div');
                         logRow.className = "log-row";
                         
-                        // Dynamic status styling
                         const isReturned = log.status === 'returned';
                         const badgeColor = isReturned ? 'background:#d4edda; color:#155724;' : 'background:#fde8e8; color:#e74c3c;';
                         
@@ -304,7 +288,6 @@
             });
         }
 
-        // --- PART 3: JS QR LINK MATRIX GENERATION MODULE ---
         document.getElementById('btn-compile-qr').addEventListener('click', () => {
             const selectedBook = document.getElementById('select-book-token').value;
             const stateLabel = document.getElementById('text-qr-state');
@@ -328,7 +311,6 @@
             };
         });
 
-        // --- PART 4: HARDWARE CAPTURING FRAME PROCESSING INTERACTION ---
         function initializeHardwareLensScanner() {
             html5QrcodeScannerInstance = new Html5QrcodeScanner("camera-lens-viewport", { 
                 fps: 15, 
@@ -342,7 +324,7 @@
             statusUIBanner.className = "system-banner loading";
             statusUIBanner.innerText = "Processing automated database check constraints blocks...";
 
-            console.log(`🎯 Executing bypass stream straight to endpoint vector target destination: ${scannedTextPayloadString}`);
+            console.log(` Executing bypass stream straight to endpoint vector target destination: ${scannedTextPayloadString}`);
 
             fetch(scannedTextPayloadString)
             .then(async (response) => {
@@ -350,23 +332,22 @@
                 
                 if(response.ok) {
                     statusUIBanner.className = "system-banner success";
-                    statusUIBanner.innerHTML = `✅ Successfully Logged to MS SQL Server Database!`;
+                    statusUIBanner.innerHTML = ` Successfully Logged to MS SQL Server Database!`;
                     
                     let receiptTab = window.open();
                     receiptTab.document.write(htmlResponseData);
                     receiptTab.document.close();
 
-                    // Instantly sync drop panels view and active lists matrices state logs definitions
                     fetchBooksFromDatabase();
                     fetchTransactionsFromDatabase();
                 } else {
                     statusUIBanner.className = "system-banner error";
-                    statusUIBanner.innerText = `⚠️ Denied: Borrow constraints rule block triggered.`;
+                    statusUIBanner.innerText = ` Denied: Borrow constraints rule block triggered.`;
                 }
             })
             .catch(err => {
                 statusUIBanner.className = "system-banner error";
-                statusUIBanner.innerText = "❌ Exception trace error: Network connection node failure.";
+                statusUIBanner.innerText = " Exception trace error: Network connection node failure.";
             });
         }
 

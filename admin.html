@@ -642,9 +642,9 @@ function processAddBook() {
         <header class="admin-header">
             <h1>SSUET Smart Library - Admin Dashboard</h1>
             <div class="header-buttons">
-                <button id="btn-toggle-panel" class="toggle-panel-btn" onclick="toggleBooksManagementPanel()">📚 Manage Catalog</button>
-                <button id="btn-refresh" class="refresh-btn">🔄 Sync Live Registry</button>
-                <button id="btn-logout" class="logout-btn" onclick="processAdminLogout()">Log Out 🚪</button>
+                <button id="btn-toggle-panel" class="toggle-panel-btn" onclick="toggleBooksManagementPanel()"> Manage Catalog</button>
+                <button id="btn-refresh" class="refresh-btn">Sync Live Registry</button>
+                <button id="btn-logout" class="logout-btn" onclick="processAdminLogout()">Log Out </button>
             </div>
         </header>
 
@@ -657,7 +657,7 @@ function processAddBook() {
                         <input type="text" id="book-id-input" placeholder="Book ID (e.g., BK-101)" class="form-control" required>
                         <input type="text" id="book-title-input" placeholder="Book Title" class="form-control" required>
                         <input type="number" id="book-qty-input" placeholder="Quantity / Stock" min="1" value="1" class="form-control" required>
-                        <button type="submit" class="submit-btn">➕ Add to Catalog</button>
+                        <button type="submit" class="submit-btn">Add to Catalog</button>
                     </form>
                 </div>
 
@@ -724,7 +724,7 @@ function processAddBook() {
             
             if (panel.style.display === "none" || panel.style.display === "") {
                 panel.style.display = "grid"; 
-                toggleBtn.innerText = "❌ Close Catalog";
+                toggleBtn.innerText = "Close Catalog";
                 toggleBtn.style.backgroundColor = "var(--error-color)";
                 loadBooksCatalog();
             } else {
@@ -740,7 +740,7 @@ function processAddBook() {
             const errorBox = document.getElementById('gate-error-log');
 
             if (!userBox || !passBox) {
-                errorBox.innerText = "❌ Exception: Identity tokens parameters cannot be null.";
+                errorBox.innerText = "Exception: Identity tokens parameters cannot be null.";
                 return;
             }
 
@@ -762,12 +762,12 @@ function processAddBook() {
                     syncAllDashboardData();
                 } else {
                     errorBox.style.color = "var(--error-color)";
-                    errorBox.innerText = response.message || "❌ Access Denied: Incorrect tokens configuration.";
+                    errorBox.innerText = response.message || "Access Denied: Incorrect tokens configuration.";
                 }
             })
             .catch(err => {
                 errorBox.style.color = "var(--error-color)";
-                errorBox.innerText = "❌ Exception fault: Node engine is currently offline.";
+                errorBox.innerText = "Exception fault: Node engine is currently offline.";
             });
         }
 
@@ -844,10 +844,10 @@ function processAddBook() {
                     alert("✅ Asset successfully returned and catalog state updated!");
                     syncAllDashboardData();
                 } else {
-                    alert(`❌ Fault: ${response.message}`);
+                    alert(`Fault: ${response.message}`);
                 }
             })
-            .catch(err => alert("❌ Network connection breakdown context."));
+            .catch(err => alert("Network connection breakdown context."));
         }
 
         function loadBooksCatalog() {
@@ -890,7 +890,7 @@ function processAddBook() {
             const qty = document.getElementById('book-qty-input').value.trim(); 
 
             if (!bookId || !title || !qty) {
-                alert("❌ Please fill out all fields!");
+                alert(" Please fill out all fields!");
                 return;
             }
 
@@ -906,14 +906,14 @@ function processAddBook() {
             .then(res => res.json())
             .then(response => {
                 if(response.success) {
-                    alert("✅ Book asset added successfully!");
+                    alert(" Book asset added successfully!");
                     document.getElementById('form-add-book').reset();
                     syncAllDashboardData(); 
                 } else {
-                    alert(`❌ Fault: ${response.message}`);
+                    alert(`Fault: ${response.message}`);
                 }
             })
-            .catch(err => alert("❌ Network error while adding book asset."));
+            .catch(err => alert("Network error while adding book asset."));
         }
 
         function processDeleteBook(bookId) {
@@ -927,13 +927,13 @@ function processAddBook() {
             .then(res => res.json())
             .then(response => {
                 if(response.success) {
-                    alert("✅ Book record purged from database registry!");
+                    alert("Book record purged from database registry!");
                     syncAllDashboardData();
                 } else {
-                    alert(`❌ Fault: ${response.message}`);
+                    alert(`Fault: ${response.message}`);
                 }
             })
-            .catch(err => alert("❌ Network error during database deletion sequence."));
+            .catch(err => alert("Network error during database deletion sequence."));
         }
     </script>
 </body>
