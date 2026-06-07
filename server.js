@@ -404,6 +404,90 @@ app.post('/api/admin/books/delete', async (req, res) => {
     }
 });
 
+app.post('/api/admin/return', async (req, res) => {
+    const { transaction_id, book_id } = req.body;
+
+    if (!transaction_id || !book_id) {
+        return res.status(400).json({
+            success: false,
+            message: "transaction_id and book_id required"
+        });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+
+        // Transaction details nikalo
+        let txnResult = await pool.request()
+            .input("txn_id", sql.VarChar, transaction_id)
+            .query(`
+                SELECT due_date
+                FROM Transactions
+                WHERE transaction_id = @txn_id
+            `);
+
+        if (txnResult.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Transaction not found"
+            });
+        }
+
+        const dueDate = new Date(txnResult.recordset[0].due_date);
+        const returnDate = new Date();
+
+        let lateDays = 0;
+        let fine = 0;
+
+        if (returnDate > dueDate) {
+            lateDays = Math.ceil(
+                (returnDate - dueDate) / (1000 * 60 * 60 * 24)
+            );
+
+            fine = lateDays * 10; // Rs.10 per day
+        }
+
+        // Transaction update
+        await pool.request()
+            .input("txn_id", sql.VarChar, transaction_id)
+            .input("return_date", sql.Date, returnDate)
+            .input("fine", sql.Decimal(10, 2), fine)
+            .query(`
+                UPDATE Transactions
+                SET
+                    status = 'returned',
+                    return_date = @return_date,
+                    fine = @fine
+                WHERE transaction_id = @txn_id
+            `);
+
+        // Book quantity wapas increase
+        await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query(`
+                UPDATE Book2
+                SET available_quantity = available_quantity + 1,
+                    status = 'available'
+                WHERE id = @book_id
+            `);
+
+        return res.json({
+            success: true,
+            message: "Book returned successfully",
+            late_days: lateDays,
+            fine: fine
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+});
+
+
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
 });
