@@ -352,6 +352,60 @@
         }
 
         function onTrackingFrameScanIterationMiss(errorLogTracingString) {}
+
+function fetchTransactionsFromDatabase() {
+    const listContainer = document.getElementById('registry-historical-list');
+    const countBadge = document.getElementById('ui-borrowed-count');
+    
+    fetch(`${BACKEND_BASE_URL}/r`)
+    .then(res => res.json())
+    .then(data => {
+        const studentTransactions = data.filter(log => log.student_id === currentActiveUserSessionKey);
+        
+        const activeIssuedBooks = studentTransactions.filter(log => log.status === 'issued');
+        countBadge.innerText = `Borrowed: ${activeIssuedBooks.length} / 3`;
+        
+        if(studentTransactions.length > 0) {
+            listContainer.innerHTML = ""; 
+            studentTransactions.forEach(log => {
+                const logRow = document.createElement('div');
+                logRow.className = "log-row";
+                
+                const isReturned = log.status === 'returned';
+                const badgeColor = isReturned ? 'background:#d4edda; color:#155724;' : 'background:#fde8e8; color:#e74c3c;';
+                
+                // Fine and Date formatting logic for UI
+                const displayFine = log.fine && log.fine > 0 ? `<span style="color:#e74c3c; font-weight:bold;">Fine: Rs. ${parseFloat(log.fine).toFixed(2)}</span>` : `<span style="color:#2ecc71;">No Fine</span>`;
+                const returnInfo = isReturned && log.return_date 
+                    ? `<br><strong>Returned On:</strong> ${new Date(log.return_date).toISOString().slice(0, 10)}` 
+                    : '';
+
+                logRow.innerHTML = `
+                    <div style="flex: 1;">
+                        <h4>Book Asset Code: ${log.book_id}</h4>
+                        <p>Transaction Sync ID: <strong>${log.transaction_id}</strong></p>
+                        <p style="margin-top: 4px; font-size: 12px;">
+                            <strong>Due Date:</strong> <span style="color:#e74c3c;">${log.due_date}</span>
+                            ${returnInfo}
+                        </p>
+                    </div>
+                    <div style="text-align: right; min-width: 110px;">
+                        <span class="badge-due" style="${badgeColor} display: inline-block; margin-bottom: 5px;">Status: ${log.status.toUpperCase()}</span>
+                        <div style="font-size: 12px; margin-top: 3px;">${displayFine}</div>
+                    </div>
+                `;
+                listContainer.appendChild(logRow);
+            });
+        } else {
+            listContainer.innerHTML = `<p id="text-empty-registry" style="color: #999; font-size: 13px; text-align: center;">No active transaction records retrieved yet.</p>`;
+        }
+    })
+    .catch(() => {
+        listContainer.innerHTML = `<p style="color: var(--error-color); text-align:center; font-size:11px;">Error syncing permanent ledger records.</p>`;
+    });
+}
+
+
     </script>
 </body>
 </html>
