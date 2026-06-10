@@ -404,6 +404,44 @@ app.post('/api/admin/books/delete', async (req, res) => {
     }
 });
 
+// --- ENDPOINT: GET STUDENT PORTAL STATS & TOTAL FINE ---
+app.get("/api/student/dashboard-stats/:student_id", async (req, res) => {
+    const { student_id } = req.params;
+
+    try {
+        let pool = await sql.connect(config);
+        
+        let result = await pool.request()
+            .input("student_id", sql.VarChar, student_id)
+            .query(`
+                SELECT 
+                    COUNT(*) AS total_transactions,
+                    SUM(CASE WHEN status = 'issued' THEN 1 ELSE 0 END) AS currently_borrowed,
+                    SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS total_returned,
+                    SUM(ISNULL(fine, 0)) AS total_fine_accumulated
+                FROM Transactions 
+                WHERE student_id = @student_id
+            `);
+
+        const stats = result.recordset[0];
+
+        return res.json({
+            success: true,
+            student_id: student_id,
+            metrics: {
+                total_transactions: stats.total_transactions || 0,
+                currently_borrowed: stats.currently_borrowed || 0,
+                total_returned: stats.total_returned || 0,
+                total_fine: parseFloat(stats.total_fine_accumulated || 0).toFixed(2)
+            }
+        });
+
+    } catch (err) {
+        console.error("Dashboard Stats Error: ", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.post('/api/admin/return', async (req, res) => {
     const { transaction_id, book_id } = req.body;
 
