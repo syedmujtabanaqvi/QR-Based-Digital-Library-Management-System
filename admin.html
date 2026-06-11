@@ -692,7 +692,7 @@ function processAddBook() {
                             <th>Issue Date</th>
                             <th>Due Date</th>
                             <th>Status</th>
-                            <th>Management Actions</th>
+                            
                         </tr>
                     </thead>
                     <tbody>
@@ -817,7 +817,7 @@ function processAddBook() {
                             <td>${new Date(log.issue_date).toLocaleString()}</td>
                             <td>${log.due_date}</td>
                             <td>${statusBadge}</td>
-                            <td>${actionButton}</td>
+                            
                         `;
                         tableBody.appendChild(row);
                     });
