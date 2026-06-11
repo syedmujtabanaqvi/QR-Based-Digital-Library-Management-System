@@ -462,6 +462,74 @@ app.get("/api/student/dashboard-stats/:student_id", async (req, res) => {
     }
 });
 
+app.post('/api/admin/return', async (req, res) => {
+    const { transaction_id, book_id } = req.body;
+
+    if (!transaction_id || !book_id) {
+        return res.status(400).json({ success: false, message: "transaction_id and book_id required" });
+    }
+
+    try {
+        let pool = await sql.connect(config);
+
+        // Transaction details out matrix fetch execution
+        let txnResult = await pool.request()
+            .input("txn_id", sql.VarChar, transaction_id)
+            .query("SELECT due_date, status FROM Transactions WHERE transaction_id = @txn_id");
+
+        if (txnResult.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: "Transaction not found" });
+        }
+
+        if (txnResult.recordset[0].status === 'returned') {
+            return res.status(400).json({ success: false, message: "Asset already marked as returned inside ledger row!" });
+        }
+
+        const dueDate = new Date(txnResult.recordset[0].due_date);
+        const returnDate = new Date();
+
+        let lateDays = 0;
+        let fine = 0.00;
+
+        if (returnDate > dueDate) {
+            const timeDiff = returnDate.getTime() - dueDate.getTime();
+            lateDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            fine = lateDays * 10; // Rule constraint: Rs. 10 per day allocation
+        }
+
+        // Transactions update (Fixed inputs types mapping)
+        await pool.request()
+            .input("txn_id", sql.VarChar, transaction_id)
+            .input("return_date", sql.DateTime, returnDate) 
+            .input("fine", sql.Decimal(10, 2), fine)        
+            .query(`
+                UPDATE Transactions
+                SET status = 'returned',
+                    return_date = @return_date,
+                    fine = @fine
+                WHERE transaction_id = @txn_id
+            `);
+
+        // Inventory replenishment balance safe sync
+        await pool.request()
+            .input("book_id", sql.VarChar, book_id)
+            .query("UPDATE Book2 SET available_quantity = available_quantity + 1, status = 'available' WHERE id = @book_id");
+
+        console.log(`🔄 Return Processed: Txn ${transaction_id} cleared. Late Days: ${lateDays}, Fine: Rs. ${fine}`);
+
+        return res.json({
+            success: true,
+            message: "Book returned successfully",
+            late_days: lateDays,
+            fine: fine
+        });
+
+    } catch (err) {
+        console.error("Critical Return Failure: ", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
 });
