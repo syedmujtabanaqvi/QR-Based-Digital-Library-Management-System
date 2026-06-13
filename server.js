@@ -129,11 +129,35 @@ app.get('/api/generate_qr', async (req, res) => {
     }
 });
 
+// app.get('/api/admin/books', async (req, res) => {
+//     try {
+//         let pool = await sql.connect(config);
+        
+//         let result = await pool.request().query("SELECT id AS book_id, title, borrow_count FROM Book2");
+        
+//         return res.json({
+//             success: true,
+//             data: result.recordset
+//         });
+//     } catch (err) {
+//         return res.status(500).json({ success: false, message: err.message });
+//     }
+// });
+
 app.get('/api/admin/books', async (req, res) => {
     try {
         let pool = await sql.connect(config);
         
-        let result = await pool.request().query("SELECT id AS book_id, title, borrow_count FROM Book2");
+        let result = await pool.request().query(`
+            SELECT 
+                id AS book_id, 
+                title, 
+                quantity, 
+                available_quantity, 
+                borrow_count 
+            FROM Book2
+            ORDER BY id DESC
+        `);
         
         return res.json({
             success: true,
@@ -144,6 +168,57 @@ app.get('/api/admin/books', async (req, res) => {
     }
 });
 
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        let pool = await sql.connect(config);
+
+        // Total issued books
+        let totalIssued = await pool.request().query(`
+            SELECT COUNT(*) AS totalIssued FROM Transactions
+        `);
+
+        // Overdue books
+        let overdueBooks = await pool.request().query(`
+            SELECT COUNT(*) AS overdueBooks
+            FROM Transactions
+            WHERE LOWER(TRIM(status))='issued'
+            AND TRY_CAST(due_date AS DATE) < CAST(GETDATE() AS DATE)
+        `);
+
+        // Active borrowers
+        let activeBorrowers = await pool.request().query(`
+            SELECT COUNT(DISTINCT student_id) AS activeBorrowers
+            FROM Transactions
+            WHERE LOWER(TRIM(status))='issued'
+        `);
+
+        // UPDATED QUERY: Jab se library start hui hai, saare returned aur live active fines ka grand total
+        let totalFine = await pool.request().query(`
+            SELECT 
+                ISNULL(SUM(CASE 
+                    -- 1. Jo return ho chuki hain unka saved fine
+                    WHEN LOWER(TRIM(status)) = 'returned' OR LOWER(TRIM(status)) = 'retuned' THEN ISNULL(fine, 0)
+                    -- 2. Jo abhi tak issued hain aur overdue hain, unka live fine calculation
+                    WHEN LOWER(TRIM(status)) = 'issued' AND TRY_CAST(due_date AS DATE) < CAST(GETDATE() AS DATE) 
+                    THEN DATEDIFF(day, TRY_CAST(due_date AS DATE), CAST(GETDATE() AS DATE)) * 10
+                    ELSE 0 
+                END), 0) AS totalFine
+            FROM Transactions
+        `);
+
+        return res.json({
+            success: true,
+            totalIssued: totalIssued.recordset[0].totalIssued,
+            overdueBooks: overdueBooks.recordset[0].overdueBooks,
+            activeBorrowers: activeBorrowers.recordset[0].activeBorrowers,
+            totalFine: totalFine.recordset[0].totalFine
+        });
+
+    } catch(err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
 app.post('/api/admin/books/add', async (req, res) => {
     const { book_id, title, quantity } = req.body; 
 
@@ -527,72 +602,6 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 
-// app.get('/api/admin/dashboard-metrics', async(req,res)=>{
-
-//     let pool=await sql.connect(config);
-
-    
-//     let mostBorrowed=await pool.request().query(`
-//         SELECT TOP 5
-//         id,title,borrow_count
-//         FROM Book2
-//         ORDER BY borrow_count DESC
-//     `);
-
-//     let defaulters=await pool.request().query(`
-//         SELECT
-//         t.student_id,
-//         s.name,
-//         t.book_id,
-//         t.due_date,
-//         t.fine
-
-//         FROM Transactions t
-//         JOIN Student s
-//         ON t.student_id=s.student_id
-
-//         WHERE t.status='issued'
-//         AND CAST(t.due_date AS DATE)
-//         < CAST(GETDATE() AS DATE)
-//     `);
-
-//     let inventory=await pool.request().query(`
-//         SELECT
-
-//         SUM(quantity) totalStock,
-
-//         SUM(available_quantity)
-//         availableStock
-
-//         FROM Book2
-//     `);
-
-//     let fine=await pool.request().query(`
-//         SELECT
-//         ISNULL(SUM(fine),0)
-//         AS totalFine
-
-//         FROM Transactions
-//     `);
-
-//     res.json({
-//         success:true,
-
-//         mostBorrowed:
-//         mostBorrowed.recordset,
-
-//         defaulters:
-//         defaulters.recordset,
-
-//         inventory:
-//         inventory.recordset[0],
-
-//         totalFine:
-//         fine.recordset[0].totalFine
-//     });
-
-// });
-
 app.get('/api/admin/dashboard-metrics', async (req, res) => {
     try {
         let pool = await sql.connect(config);
@@ -611,18 +620,23 @@ app.get('/api/admin/dashboard-metrics', async (req, res) => {
             ORDER BY borrow_count DESC
         `);
 
-        // 3. Defaulters List (Overdue Books)
+        // 3. UPDATED: Defaulters List with Live Fine Calculation Logic (Rs. 10 per day)
         let defaulters = await pool.request().query(`
             SELECT 
                 t.student_id,
                 s.name,
                 t.book_id,
                 t.due_date,
-                t.fine
+                -- Live calculation agar book overdue hai: (Current Date - Due Date) * Rs.10
+                CASE 
+                    WHEN TRY_CAST(t.due_date AS DATE) < CAST(GETDATE() AS DATE)
+                    THEN DATEDIFF(day, TRY_CAST(t.due_date AS DATE), CAST(GETDATE() AS DATE)) * 10
+                    ELSE 0
+                END AS fine
             FROM Transactions t
             JOIN Student s ON t.student_id = s.student_id
-            WHERE t.status = 'issued'
-            AND CAST(t.due_date AS DATE) < CAST(GETDATE() AS DATE)
+            WHERE LOWER(TRIM(t.status)) = 'issued'
+            AND TRY_CAST(t.due_date AS DATE) < CAST(GETDATE() AS DATE)
         `);
 
         // 4. Inventory Metrics
