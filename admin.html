@@ -621,6 +621,55 @@ function processAddBook() {
             cursor: pointer;
         }
         .submit-btn:hover { opacity: 0.9; }
+        .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+    margin-bottom:20px;
+}
+
+.stat-card{
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    text-align:center;
+}
+
+.stat-card h4{
+    margin:0;
+    color:#0f5a6e;
+}
+
+.stat-card p{
+    margin-top:15px;
+    font-size:32px;
+    font-weight:bold;
+}
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+}
+
+.stat-card{
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 4px 10px rgba(0,0,0,.1);
+}
+
+.stat-card h4{
+    color:#0f5a6e;
+    margin-bottom:10px;
+}
+
+.stat-card p{
+    font-size:28px;
+    font-weight:bold;
+    margin:0;
+}
     </style>
 </head>
 <body>
@@ -638,6 +687,7 @@ function processAddBook() {
         </div>
     </div>
 
+   
     <div id="admin-main-dashboard" class="admin-layout">
         <header class="admin-header">
             <h1>SSUET Smart Library - Admin Dashboard</h1>
@@ -680,7 +730,80 @@ function processAddBook() {
                     </table>
                 </div>
             </div>
+            <div class="admin-panel">
+    <h3 style="color: var(--error-color);">⚠️ Overdue Books Registry (Defaulters List)</h3>
+    <table class="log-table" id="table-defaulters">
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Book ID</th>
+                <th>Due Date</th>
+                <th>Accumulated Fine</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="5" style="text-align: center; color: #999;">No overdue books pending in system ledger.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="stats-grid">
+    <div class="stat-card">
+        <h4>Total Issued Books</h4>
+        <p id="total-issued">0</p>
+    </div>
 
+    <div class="stat-card">
+        <h4>Overdue Books</h4>
+        <p id="overdue-books">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h4>Active Borrowers</h4>
+        <p id="active-borrowers">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h4>Fine Reports</h4>
+        <p id="fine-reports">Rs. 0</p>
+    </div>
+</div>
+<div class="admin-panel">
+
+    <h3>📊 Dashboard Metrics</h3>
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <h4>Most Borrowed Book</h4>
+            <p id="most-borrowed">-</p>
+        </div>
+
+        <div class="stat-card">
+            <h4>Defaulters</h4>
+            <p id="defaulters-count">0</p>
+        </div>
+
+        <div class="stat-card">
+            <h4>Today's Transactions</h4>
+            <p id="daily-transactions">0</p>
+        </div>
+
+        <div class="stat-card">
+            <h4>Available Stock</h4>
+            <p id="available-stock">0</p>
+        </div>
+
+        <div class="stat-card">
+            <h4>Total Fine</h4>
+            <p id="total-fine">Rs. 0</p>
+        </div>
+
+    </div>
+
+</div>
             <div class="admin-panel">
                 <h3>Active & Historical Book Allocations</h3>
                 <table class="log-table" id="table-transactions">
@@ -706,235 +829,264 @@ function processAddBook() {
         </div>
     </div>
 
-    <script>
-        const BACKEND_BASE_URL = "http://localhost:5000";
+   <script>
+const BACKEND_BASE_URL = "http://localhost:5000";
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const isAdminLoggedIn = localStorage.getItem('adminLoggedIn');
-            if (isAdminLoggedIn === 'true') {
-                document.getElementById('admin-gate-overlay').style.display = 'none';
-                document.getElementById('admin-main-dashboard').style.display = 'block';
-                syncAllDashboardData();
-            }
-        });
+window.addEventListener('DOMContentLoaded', () => {
+    const isAdminLoggedIn = localStorage.getItem('adminLoggedIn');
+    if (isAdminLoggedIn === 'true') {
+        document.getElementById('admin-gate-overlay').style.display = 'none';
+        document.getElementById('admin-main-dashboard').style.display = 'block';
+        syncAllDashboardData();
+    }
+});
 
-        function toggleBooksManagementPanel() {
-            const panel = document.getElementById('books-management-section');
-            const toggleBtn = document.getElementById('btn-toggle-panel');
-            
-            if (panel.style.display === "none" || panel.style.display === "") {
-                panel.style.display = "grid"; 
-                toggleBtn.innerText = "Close Catalog";
-                toggleBtn.style.backgroundColor = "var(--error-color)";
-                loadBooksCatalog();
+function toggleBooksManagementPanel() {
+    const panel = document.getElementById('books-management-section');
+    const toggleBtn = document.getElementById('btn-toggle-panel');
+    
+    if (panel.style.display === "none" || panel.style.display === "") {
+        panel.style.display = "grid"; 
+        toggleBtn.innerText = "Close Catalog";
+        toggleBtn.style.backgroundColor = "var(--error-color)";
+        loadBooksCatalog();
+    } else {
+        panel.style.display = "none"; 
+        toggleBtn.innerText = "📚 Manage Catalog";
+        toggleBtn.style.backgroundColor = "var(--info-color)";
+    }
+}
+
+function verifyAdminCredentialsFromDB() {
+    const userBox = document.getElementById('admin-username-input').value.trim();
+    const passBox = document.getElementById('admin-password-input').value;
+    const errorBox = document.getElementById('gate-error-log');
+
+    if (!userBox || !passBox) {
+        errorBox.innerText = "Exception: Identity tokens parameters cannot be null.";
+        return;
+    }
+
+    errorBox.style.color = "var(--warning-color)";
+    errorBox.innerText = "Connecting database cluster network layers...";
+
+    fetch(`${BACKEND_BASE_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userBox, password: passBox })
+    })
+    .then(res => res.json())
+    .then(response => {
+        if (response.success) {
+            localStorage.setItem('adminLoggedIn', 'true');
+            localStorage.setItem('adminUserToken', userBox);
+            document.getElementById('admin-gate-overlay').style.display = 'none';
+            document.getElementById('admin-main-dashboard').style.display = 'block';
+            syncAllDashboardData();
+        } else {
+            errorBox.style.color = "var(--error-color)";
+            errorBox.innerText = response.message || "Access Denied: Incorrect tokens configuration.";
+        }
+    })
+    .catch(err => {
+        errorBox.style.color = "var(--error-color)";
+        errorBox.innerText = "Exception fault: Node engine is currently offline.";
+    });
+}
+
+function processAdminLogout() {
+    if (!confirm("Are you sure you want to log out from the Control Center?")) return;
+    localStorage.removeItem('adminLoggedIn');
+    localStorage.removeItem('adminUserToken');
+    document.getElementById('admin-main-dashboard').style.display = 'none';
+    document.getElementById('admin-gate-overlay').style.display = 'flex';
+    document.getElementById('admin-username-input').value = "";
+    document.getElementById('admin-password-input').value = "";
+    document.getElementById('gate-error-log').innerText = "";
+}
+
+document.getElementById('btn-refresh').addEventListener('click', syncAllDashboardData);
+
+function syncAllDashboardData() {
+    loadDashboardStats();
+    loadDashboardMetrics();
+    loadAdminLogDashboard();
+    
+    const panel = document.getElementById('books-management-section');
+    if (panel.style.display === "grid") {
+        loadBooksCatalog();
+    }
+}
+
+function loadDashboardStats() {
+    fetch(`${BACKEND_BASE_URL}/api/admin/stats`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("total-issued").innerText = data.totalIssued || 0;
+        document.getElementById("overdue-books").innerText = data.overdueBooks || 0;
+        document.getElementById("active-borrowers").innerText = data.activeBorrowers || 0;
+        document.getElementById("fine-reports").innerText = "Rs. " + parseFloat(data.totalFine || 0).toFixed(2);
+    })
+    .catch(err => console.error("Stats fetch error:", err));
+}
+
+function loadDashboardMetrics() {
+    const defaultersTableBody = document.querySelector('#table-defaulters tbody');
+
+    fetch(`${BACKEND_BASE_URL}/api/admin/dashboard-metrics`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            // 1. Most Borrowed
+            if(data.mostBorrowed && data.mostBorrowed.length > 0){
+                document.getElementById("most-borrowed").innerText = data.mostBorrowed[0].title;
             } else {
-                panel.style.display = "none"; 
-                toggleBtn.innerText = "📚 Manage Catalog";
-                toggleBtn.style.backgroundColor = "var(--info-color)";
+                document.getElementById("most-borrowed").innerText = "-";
+            }
+
+            // 2. Counts & Metrics
+            document.getElementById("defaulters-count").innerText = data.defaulters ? data.defaulters.length : 0;
+            document.getElementById("available-stock").innerText = data.inventory ? (data.inventory.availableStock || 0) : 0;
+            document.getElementById("total-fine").innerText = "Rs. " + parseFloat(data.totalFine || 0).toFixed(2);
+            document.getElementById("daily-transactions").innerText = data.dailyTransactions || 0;
+
+            // 3. DYNAMICALLY RENDER DEFAULTERS TABLE
+            if (data.defaulters && data.defaulters.length > 0) {
+                defaultersTableBody.innerHTML = "";
+                data.defaulters.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.student_id}</td>
+                        <td><strong>${student.name}</strong></td>
+                        <td style="font-family: monospace;">${student.book_id}</td>
+                        <td style="color: var(--error-color); font-weight: 600;">${student.due_date}</td>
+                        <td style="color: var(--error-color); font-weight: bold;">Rs. ${parseFloat(student.fine || 0).toFixed(2)}</td>
+                    `;
+                    defaultersTableBody.appendChild(row);
+                });
+            } else {
+                defaultersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No overdue books pending in system ledger.</td></tr>';
             }
         }
+    })
+    .catch(err => console.log("Metrics pipeline error:", err));
+}
 
-        function verifyAdminCredentialsFromDB() {
-            const userBox = document.getElementById('admin-username-input').value.trim();
-            const passBox = document.getElementById('admin-password-input').value;
-            const errorBox = document.getElementById('gate-error-log');
+function loadAdminLogDashboard() {
+    const tableBody = document.querySelector('#table-transactions tbody');
+    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Fetching secure logs pipeline...</td></tr>';
 
-            if (!userBox || !passBox) {
-                errorBox.innerText = "Exception: Identity tokens parameters cannot be null.";
-                return;
-            }
-
-            errorBox.style.color = "var(--warning-color)";
-            errorBox.innerText = "Connecting database cluster network layers...";
-
-            fetch(`${BACKEND_BASE_URL}/api/admin/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: userBox, password: passBox })
-            })
-            .then(res => res.json())
-            .then(response => {
-                if (response.success) {
-                    localStorage.setItem('adminLoggedIn', 'true');
-                    localStorage.setItem('adminUserToken', userBox);
-                    document.getElementById('admin-gate-overlay').style.display = 'none';
-                    document.getElementById('admin-main-dashboard').style.display = 'block';
-                    syncAllDashboardData();
-                } else {
-                    errorBox.style.color = "var(--error-color)";
-                    errorBox.innerText = response.message || "Access Denied: Incorrect tokens configuration.";
-                }
-            })
-            .catch(err => {
-                errorBox.style.color = "var(--error-color)";
-                errorBox.innerText = "Exception fault: Node engine is currently offline.";
+    fetch(`${BACKEND_BASE_URL}/api/admin/transactions`)
+    .then(res => res.json())
+    .then(response => {
+        if(response.success && response.data.length > 0) {
+            tableBody.innerHTML = "";
+            response.data.forEach(log => {
+                const statusBadge = `<span class="badge ${log.status}">${log.status.toUpperCase()}</span>`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-family: monospace; font-weight: bold;">${log.transaction_id}</td>
+                    <td>${log.student_id}</td>
+                    <td>${log.book_id}</td>
+                    <td>${new Date(log.issue_date).toLocaleDateString()}</td>
+                    <td>${log.due_date}</td>
+                    <td>${statusBadge}</td>
+                `;
+                tableBody.appendChild(row);
             });
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No transactions found.</td></tr>';
         }
+    })
+    .catch(err => {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--error-color);">Failed to reach cluster.</td></tr>';
+    });
+}
 
-        function processAdminLogout() {
-            if (!confirm("Are you sure you want to log out from the Control Center?")) return;
-            localStorage.removeItem('adminLoggedIn');
-            localStorage.removeItem('adminUserToken');
-            document.getElementById('admin-main-dashboard').style.display = 'none';
-            document.getElementById('admin-gate-overlay').style.display = 'flex';
-            document.getElementById('admin-username-input').value = "";
-            document.getElementById('admin-password-input').value = "";
-            document.getElementById('gate-error-log').innerText = "";
-        }
+function loadBooksCatalog() {
+    const tableBody = document.querySelector('#table-books tbody');
+    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Fetching catalog data...</td></tr>';
 
-        document.getElementById('btn-refresh').addEventListener('click', syncAllDashboardData);
+    fetch(`${BACKEND_BASE_URL}/api/admin/books`)
+    .then(res => res.json())
+    .then(response => {
+        if(response.success && response.data.length > 0) {
+            tableBody.innerHTML = "";
+            response.data.forEach(book => {
+                const currentBookId = book.book_id || book.id; 
+                const currentQuantity = book.borrow_count !== undefined ? book.borrow_count : (book.quantity || 1);
 
-        function syncAllDashboardData() {
-            loadAdminLogDashboard();
-            const panel = document.getElementById('books-management-section');
-            if (panel.style.display === "grid") {
-                loadBooksCatalog();
-            }
-        }
-
-        function loadAdminLogDashboard() {
-            const tableBody = document.querySelector('#table-transactions tbody');
-            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Fetching secure logs pipeline...</td></tr>';
-
-            fetch(`${BACKEND_BASE_URL}/api/admin/transactions`)
-            .then(res => res.json())
-            .then(response => {
-                if(response.success && response.data.length > 0) {
-                    tableBody.innerHTML = "";
-                    response.data.forEach(log => {
-                        const row = document.createElement('tr');
-                        const isIssued = log.status === 'issued';
-                        const statusBadge = `<span class="badge ${log.status}">${log.status.toUpperCase()}</span>`;
-                        
-                        const actionButton = isIssued 
-                            ? `<button class="action-btn" onclick="processBookReturn('${log.transaction_id}', '${log.book_id}')">Mark Returned</button>`
-                            : `<button class="action-btn" style="background-color:#ccc;" disabled>Settled</button>`;
-
-                        row.innerHTML = `
-                            <td style="font-family: monospace; font-weight: bold;">${log.transaction_id}</td>
-                            <td>${log.student_id}</td>
-                            <td>${log.book_id}</td>
-                            <td>${new Date(log.issue_date).toLocaleString()}</td>
-                            <td>${log.due_date}</td>
-                            <td>${statusBadge}</td>
-                            
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                } else {
-                    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No transaction matrix rows found inside DB ledger.</td></tr>';
-                }
-            })
-            .catch(err => {
-                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--error-color);">Failed to reach cluster. Ensure backend is running.</td></tr>';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-family: monospace; font-weight: bold;">${currentBookId}</td>
+                    <td>${book.title}</td>
+                    <td>${currentQuantity}</td>
+                    <td>
+                        <button class="action-btn" onclick="processDeleteBook('${currentBookId}')">❌ Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
             });
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No books available in catalog.</td></tr>';
         }
+    })
+    .catch(err => {
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--error-color);">Error fetching books data.</td></tr>';
+    });
+}
 
-        function processBookReturn(transactionId, bookId) {
-            if(!confirm(`Are you sure you want to return Book ${bookId} for Transaction ${transactionId}?`)) return;
+function processAddBook() {
+    const bookId = document.getElementById('book-id-input').value.trim();
+    const title = document.getElementById('book-title-input').value.trim();
+    const qty = document.getElementById('book-qty-input').value.trim(); 
 
-            fetch(`${BACKEND_BASE_URL}/api/admin/return`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transaction_id: transactionId, book_id: bookId })
-            })
-            .then(res => res.json())
-            .then(response => {
-                if(response.success) {
-                    alert("✅ Asset successfully returned and catalog state updated!");
-                    syncAllDashboardData();
-                } else {
-                    alert(`Fault: ${response.message}`);
-                }
-            })
-            .catch(err => alert("Network connection breakdown context."));
+    if (!bookId || !title || !qty) {
+        alert("Please fill out all fields!");
+        return;
+    }
+
+    fetch(`${BACKEND_BASE_URL}/api/admin/books/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            book_id: bookId, 
+            title: title,
+            quantity: parseInt(qty)
+        })
+    })
+    .then(res => res.json())
+    .then(response => {
+        if(response.success) {
+            alert("Book asset added successfully!");
+            document.getElementById('form-add-book').reset();
+            syncAllDashboardData(); 
+        } else {
+            alert(`Fault: ${response.message}`);
         }
+    })
+    .catch(err => alert("Network error while adding book asset."));
+}
 
-        function loadBooksCatalog() {
-            const tableBody = document.querySelector('#table-books tbody');
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Fetching catalog data...</td></tr>';
+function processDeleteBook(bookId) {
+    if(!confirm(`Are you sure you want to permanently delete Book ID: ${bookId}?`)) return;
 
-            fetch(`${BACKEND_BASE_URL}/api/admin/books`)
-            .then(res => res.json())
-            .then(response => {
-                if(response.success && response.data.length > 0) {
-                    tableBody.innerHTML = "";
-                    response.data.forEach(book => {
-                        const currentBookId = book.book_id || book.id; 
-                        const currentQuantity = book.borrow_count !== undefined ? book.borrow_count : (book.quantity || 1);
-
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td style="font-family: monospace; font-weight: bold;">${currentBookId}</td>
-                            <td>${book.title}</td>
-                            <td>${currentQuantity}</td>
-                            <td>
-                                <button class="action-btn" onclick="processDeleteBook('${currentBookId}')">❌ Delete</button>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                } else {
-                    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No books available in catalog.</td></tr>';
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--error-color);">Error fetching books data stream.</td></tr>';
-            });
+    fetch(`${BACKEND_BASE_URL}/api/admin/books/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book_id: bookId })
+    })
+    .then(res => res.json())
+    .then(response => {
+        if(response.success) {
+            alert("Book record purged from database registry!");
+            syncAllDashboardData();
+        } else {
+            alert(`Fault: ${response.message}`);
         }
-
-        function processAddBook() {
-            const bookId = document.getElementById('book-id-input').value.trim();
-            const title = document.getElementById('book-title-input').value.trim();
-            const qty = document.getElementById('book-qty-input').value.trim(); 
-
-            if (!bookId || !title || !qty) {
-                alert(" Please fill out all fields!");
-                return;
-            }
-
-            fetch(`${BACKEND_BASE_URL}/api/admin/books/add`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    book_id: bookId, 
-                    title: title,
-                    quantity: parseInt(qty)
-                })
-            })
-            .then(res => res.json())
-            .then(response => {
-                if(response.success) {
-                    alert(" Book asset added successfully!");
-                    document.getElementById('form-add-book').reset();
-                    syncAllDashboardData(); 
-                } else {
-                    alert(`Fault: ${response.message}`);
-                }
-            })
-            .catch(err => alert("Network error while adding book asset."));
-        }
-
-        function processDeleteBook(bookId) {
-            if(!confirm(`Are you sure you want to permanently delete Book ID: ${bookId}?`)) return;
-
-            fetch(`${BACKEND_BASE_URL}/api/admin/books/delete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ book_id: bookId })
-            })
-            .then(res => res.json())
-            .then(response => {
-                if(response.success) {
-                    alert("Book record purged from database registry!");
-                    syncAllDashboardData();
-                } else {
-                    alert(`Fault: ${response.message}`);
-                }
-            })
-            .catch(err => alert("Network error during database deletion sequence."));
-        }
-    </script>
+    })
+    .catch(err => alert("Network error during database deletion sequence."));
+}
+</script>
 </body>
 </html>

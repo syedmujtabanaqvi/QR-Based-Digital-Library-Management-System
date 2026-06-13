@@ -434,6 +434,230 @@ app.get('/api/circulation/return', async (req, res) => {
     }
 });
 
+
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+let pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('username', sql.VarChar, username)
+            .input('password', sql.VarChar, password)
+            .query(`
+                SELECT *
+                FROM AdminUser
+                WHERE username = @username
+                AND password = @password
+            `);
+
+        if (result.recordset.length > 0) {
+            return res.json({
+                success: true,
+                message: 'Admin login successful'
+            });
+        }
+
+        return res.json({
+            success: false,
+            message: 'Invalid username or password'
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        let pool = await sql.connect(config);
+
+        // Total issued books
+        let totalIssued = await pool.request().query(`
+            SELECT COUNT(*) AS totalIssued
+            FROM Transactions
+        `);
+
+        // Overdue books
+        let overdueBooks = await pool.request().query(`
+            SELECT COUNT(*) AS overdueBooks
+            FROM Transactions
+            WHERE status='issued'
+            AND CAST(due_date AS DATE) < CAST(GETDATE() AS DATE)
+        `);
+
+        // Active borrowers
+        let activeBorrowers = await pool.request().query(`
+            SELECT COUNT(DISTINCT student_id) AS activeBorrowers
+            FROM Transactions
+            WHERE status='issued'
+        `);
+
+        // Fine reports
+        let totalFine = await pool.request().query(`
+            SELECT ISNULL(SUM(fine),0) AS totalFine
+            FROM Transactions
+        `);
+
+        res.json({
+            success: true,
+            totalIssued:
+                totalIssued.recordset[0].totalIssued,
+
+            overdueBooks:
+                overdueBooks.recordset[0].overdueBooks,
+
+            activeBorrowers:
+                activeBorrowers.recordset[0].activeBorrowers,
+
+            totalFine:
+                totalFine.recordset[0].totalFine
+        });
+
+    } catch(err) {
+        console.log(err);
+        res.status(500).json({
+            success:false,
+            message:err.message
+        });
+    }
+});
+
+
+// app.get('/api/admin/dashboard-metrics', async(req,res)=>{
+
+//     let pool=await sql.connect(config);
+
+    
+//     let mostBorrowed=await pool.request().query(`
+//         SELECT TOP 5
+//         id,title,borrow_count
+//         FROM Book2
+//         ORDER BY borrow_count DESC
+//     `);
+
+//     let defaulters=await pool.request().query(`
+//         SELECT
+//         t.student_id,
+//         s.name,
+//         t.book_id,
+//         t.due_date,
+//         t.fine
+
+//         FROM Transactions t
+//         JOIN Student s
+//         ON t.student_id=s.student_id
+
+//         WHERE t.status='issued'
+//         AND CAST(t.due_date AS DATE)
+//         < CAST(GETDATE() AS DATE)
+//     `);
+
+//     let inventory=await pool.request().query(`
+//         SELECT
+
+//         SUM(quantity) totalStock,
+
+//         SUM(available_quantity)
+//         availableStock
+
+//         FROM Book2
+//     `);
+
+//     let fine=await pool.request().query(`
+//         SELECT
+//         ISNULL(SUM(fine),0)
+//         AS totalFine
+
+//         FROM Transactions
+//     `);
+
+//     res.json({
+//         success:true,
+
+//         mostBorrowed:
+//         mostBorrowed.recordset,
+
+//         defaulters:
+//         defaulters.recordset,
+
+//         inventory:
+//         inventory.recordset[0],
+
+//         totalFine:
+//         fine.recordset[0].totalFine
+//     });
+
+// });
+
+app.get('/api/admin/dashboard-metrics', async (req, res) => {
+    try {
+        let pool = await sql.connect(config);
+
+        // 1. Daily Transactions Count
+        let dailyTransactionsResult = await pool.request().query(`
+            SELECT COUNT(*) AS dailyTransactions
+            FROM Transactions
+            WHERE CAST(issue_date AS DATE) = CAST(GETDATE() AS DATE)
+        `);
+
+        // 2. Top 5 Most Borrowed Books
+        let mostBorrowed = await pool.request().query(`
+            SELECT TOP 5 id, title, borrow_count
+            FROM Book2
+            ORDER BY borrow_count DESC
+        `);
+
+        // 3. Defaulters List (Overdue Books)
+        let defaulters = await pool.request().query(`
+            SELECT 
+                t.student_id,
+                s.name,
+                t.book_id,
+                t.due_date,
+                t.fine
+            FROM Transactions t
+            JOIN Student s ON t.student_id = s.student_id
+            WHERE t.status = 'issued'
+            AND CAST(t.due_date AS DATE) < CAST(GETDATE() AS DATE)
+        `);
+
+        // 4. Inventory Metrics
+        let inventory = await pool.request().query(`
+            SELECT 
+                SUM(quantity) AS totalStock,
+                SUM(available_quantity) AS availableStock
+            FROM Book2
+        `);
+
+        // 5. Total Accumulated Fine
+        let fine = await pool.request().query(`
+            SELECT ISNULL(SUM(fine), 0) AS totalFine
+            FROM Transactions
+        `);
+
+        // Clean & complete JSON response
+        return res.json({
+            success: true,
+            dailyTransactions: dailyTransactionsResult.recordset[0].dailyTransactions,
+            mostBorrowed: mostBorrowed.recordset,
+            defaulters: defaulters.recordset,
+            inventory: inventory.recordset[0],
+            totalFine: fine.recordset[0].totalFine
+        });
+
+    } catch (err) {
+        console.error("Dashboard Metrics Error: ", err);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: err.message
+        });
+    }
+});
 app.listen(5000, () => {
     console.log("Server running safely on http://localhost:5000");
 });
