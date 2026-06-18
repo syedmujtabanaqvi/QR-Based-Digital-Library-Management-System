@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SSUET Smart Library - Admin Control Center</title>
+    <title>Smart Library - Admin Control Center</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -192,6 +192,7 @@
 }
 .stats-grid{
     display:grid;
+    
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     gap:20px;
 }
@@ -214,6 +215,36 @@
     font-weight:bold;
     margin:0;
 }
+/* Custom grid structure for dynamic report charts */
+.reports-layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(48%, 1fr));
+    gap: 25px;
+    margin-top: 25px;
+}
+@media (max-width: 768px) {
+    .reports-layout-grid { grid-template-columns: 1fr; }
+}
+.trend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.trend-item:last-child { border-bottom: none; }
+.progress-bar-container {
+    width: 100%;
+    background-color: #edf2f7;
+    border-radius: 4px;
+    height: 10px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--accent-color);
+}
     </style>
 </head>
 <body>
@@ -234,7 +265,7 @@
    
     <div id="admin-main-dashboard" class="admin-layout">
         <header class="admin-header">
-            <h1>SSUET Smart Library - Admin Dashboard</h1>
+            <h1>Smart Library - Admin Dashboard</h1>
             <div class="header-buttons">
                 <button id="btn-toggle-panel" class="toggle-panel-btn" onclick="toggleBooksManagementPanel()"> Manage Catalog</button>
                 <button id="btn-refresh" class="refresh-btn">Sync Live Registry</button>
@@ -320,10 +351,7 @@
 
     <div class="stats-grid">
 
-        <div class="stat-card">
-            <h4>Most Borrowed Book</h4>
-            <p id="most-borrowed">-</p>
-        </div>
+        
 
         <div class="stat-card">
             <h4>Defaulters</h4>
@@ -347,6 +375,51 @@
 
     </div>
 
+</div>
+<div class="reports-layout-grid">
+
+    <div class="admin-panel">
+        <h3>🔥 Most Active Borrowers</h3>
+        <div id="report-active-students" style="margin-top: 15px;">
+            <p style="color:#999; text-align:center;">Loading systemic active index profile layers...</p>
+        </div>
+    </div>
+
+    <div class="admin-panel">
+        <h3>📚 Book Popularity Index</h3>
+        <div id="report-popular-books" style="margin-top: 15px;">
+            <p style="color:#999; text-align:center;">Loading catalog popularity matrix metrics...</p>
+        </div>
+    </div>
+
+    <div class="admin-panel">
+        <h3>🕒 Peak Operations Rush Hour</h3>
+        <div id="report-peak-timings" style="margin-top: 15px;">
+            <p style="color:#999; text-align:center;">Analyzing timestamp telemetry tracking loggers...</p>
+        </div>
+    </div>
+
+    <div class="admin-panel">
+        <h3>🏢 Department-wise Circulation</h3>
+        <div id="report-dept-stats" style="margin-top: 15px;">
+            <p style="color:#999; text-align:center;">Dividing cluster segmentation allocations...</p>
+        </div>
+    </div>
+</div>
+
+<div class="admin-panel" style="margin-top:25px;">
+    <h3>💰 Ledger Accounting & Fine Trends</h3>
+    <div style="display: flex; justify-content: space-around; text-align: center; padding: 15px 0;">
+        <div>
+            <h4 style="color: var(--success-color); margin:0;">Collected Fine Cash</h4>
+            <p id="trend-collected-fine" style="font-size: 28px; font-weight: bold; margin: 10px 0;">Rs. 0.00</p>
+        </div>
+        <div style="border-left: 1px solid #ddd; height: 60px;"></div>
+        <div>
+            <h4 style="color: var(--error-color); margin:0;">Pending Systemic Overdue Fine</h4>
+            <p id="trend-pending-fine" style="font-size: 28px; font-weight: bold; margin: 10px 0;">Rs. 0.00</p>
+        </div>
+    </div>
 </div>
             <div class="admin-panel">
                 <h3>Active & Historical Book Allocations</h3>
@@ -630,6 +703,162 @@ function processDeleteBook(bookId) {
         }
     })
     .catch(err => alert("Network error during database deletion sequence."));
+}
+function loadDashboardMetrics() {
+    const defaultersTableBody = document.querySelector('#table-defaulters tbody');
+
+    fetch(`${BACKEND_BASE_URL}/api/admin/dashboard-metrics`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            // 1. Most Borrowed
+            if(data.mostBorrowed && data.mostBorrowed.length > 0){
+                document.getElementById("most-borrowed").innerText = data.mostBorrowed[0].title;
+            } else {
+                document.getElementById("most-borrowed").innerText = "-";
+            }
+
+            // 2. Counts & Metrics
+            document.getElementById("defaulters-count").innerText = data.defaulters ? data.defaulters.length : 0;
+            document.getElementById("available-stock").innerText = data.inventory ? (data.inventory.availableStock || 0) : 0;
+            document.getElementById("total-fine").innerText = "Rs. " + parseFloat(data.totalFine || 0).toFixed(2);
+            document.getElementById("daily-transactions").innerText = data.dailyTransactions || 0;
+
+            // 🔥 NEW DISPLAY HOOK: Populate Top Active Student UI Card
+            if(data.activeStudents && data.activeStudents.length > 0) {
+                const topStudent = data.activeStudents[0];
+                document.getElementById("active-student-metric").innerHTML = 
+                    `<strong>${topStudent.name}</strong><br><span style="font-size:14px; color:#666;">(${topStudent.student_id})</span><br><span class="badge returned" style="display:inline-block; margin-top:5px;">${topStudent.total_borrowed} Books</span>`;
+            } else {
+                document.getElementById("active-student-metric").innerText = "No records logged.";
+            }
+
+            // 3. DYNAMICALLY RENDER DEFAULTERS TABLE
+            if (data.defaulters && data.defaulters.length > 0) {
+                defaultersTableBody.innerHTML = "";
+                data.defaulters.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.student_id}</td>
+                        <td><strong>${student.name}</strong></td>
+                        <td style="font-family: monospace;">${student.book_id}</td>
+                        <td style="color: var(--error-color); font-weight: 600;">${student.due_date}</td>
+                        <td style="color: var(--error-color); font-weight: bold;">Rs. ${parseFloat(student.fine || 0).toFixed(2)}</td>
+                    `;
+                    defaultersTableBody.appendChild(row);
+                });
+            } else {
+                defaultersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No overdue books pending in system ledger.</td></tr>';
+            }
+        }
+    })
+    .catch(err => console.log("Metrics pipeline error:", err));
+}
+
+function loadDashboardMetrics() {
+    const defaultersTableBody = document.querySelector('#table-defaulters tbody');
+    
+    // UI Elements targets
+    const studentContainer = document.getElementById("report-active-students");
+    const bookContainer = document.getElementById("report-popular-books");
+    const timingContainer = document.getElementById("report-peak-timings");
+    const deptContainer = document.getElementById("report-dept-stats");
+
+    fetch(`${BACKEND_BASE_URL}/api/admin/dashboard-metrics`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            // 1. Base Counter Update Checks
+            document.getElementById("defaulters-count").innerText = data.defaulters ? data.defaulters.length : 0;
+            document.getElementById("available-stock").innerText = data.inventory ? (data.inventory.availableStock || 0) : 0;
+            document.getElementById("total-fine").innerText = "Rs. " + parseFloat(data.totalFine || 0).toFixed(2);
+            document.getElementById("daily-transactions").innerText = data.dailyTransactions || 0;
+
+            // 2. RENDER: Most Active Students
+            if(data.activeStudents && data.activeStudents.length > 0) {
+                studentContainer.innerHTML = "";
+                data.activeStudents.forEach(st => {
+                    studentContainer.innerHTML += `
+                        <div class="trend-item">
+                            <span><strong>${st.name}</strong> <small style="color:#666;">(${st.student_id})</small></span>
+                            <span class="badge returned">${st.total_borrowed} Books Issued</span>
+                        </div>`;
+                });
+            } else { studentContainer.innerHTML = `<p style="color:#999; text-align:center;">No transaction loops recorded.</p>`; }
+
+            // 3. RENDER: Popular Books Catalog Index
+            if(data.popularBooks && data.popularBooks.length > 0) {
+                bookContainer.innerHTML = "";
+                // Tracking standard baseline for dynamic bar metrics width scaling
+                const maxBorrow = data.popularBooks[0].borrow_count || 1;
+                data.popularBooks.forEach(bk => {
+                    const widthPercent = Math.min(100, (bk.borrow_count / maxBorrow) * 100);
+                    bookContainer.innerHTML += `
+                        <div style="margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; font-size:14px;">
+                                <span><strong>${bk.title}</strong> <small style="color:#777;">(${bk.book_id})</small></span>
+                                <strong>${bk.borrow_count} times</strong>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: ${widthPercent}%;"></div>
+                            </div>
+                        </div>`;
+                });
+            } else { bookContainer.innerHTML = `<p style="color:#999; text-align:center;">No popular book tags evaluated.</p>`; }
+
+            // 4. RENDER: Peak Rush Timings (Formatted clock logs calculation)
+            if(data.peakTimings && data.peakTimings.length > 0) {
+                timingContainer.innerHTML = "";
+                data.peakTimings.forEach(tm => {
+                    const ampm = tm.issue_hour >= 12 ? 'PM' : 'AM';
+                    let displayHour = tm.issue_hour % 12;
+                    displayHour = displayHour ? displayHour : 12; // Handle hour '0' to mean 12 AM
+                    timingContainer.innerHTML += `
+                        <div class="trend-item">
+                            <span>🕒 Slot Period: <strong>${displayHour}:00 ${ampm}</strong></span>
+                            <span class="badge issued" style="font-weight:bold;">${tm.volume} Traffic Loops</span>
+                        </div>`;
+                });
+            } else { timingContainer.innerHTML = `<p style="color:#999; text-align:center;">No operations metrics compiled yet.</p>`; }
+
+            // 5. RENDER: Department-wise Statistics
+            if(data.deptStats && data.deptStats.length > 0) {
+                deptContainer.innerHTML = "";
+                data.deptStats.forEach(dp => {
+                    deptContainer.innerHTML += `
+                        <div class="trend-item">
+                            <span>🏢 <strong>${dp.department}</strong></span>
+                            <span class="badge style="background:#e0f2fe; color:#0369a1;">${dp.total_issues} Allocations</span>
+                        </div>`;
+                });
+            } else { deptContainer.innerHTML = `<p style="color:#999; text-align:center;">No departments linked to live activity.</p>`; }
+
+            // 6. RENDER: Ledger Financial Fine Accounting Trends
+            if(data.fineTrends) {
+                document.getElementById("trend-collected-fine").innerText = "Rs. " + parseFloat(data.fineTrends.collected_fine || 0).toFixed(2);
+                document.getElementById("trend-pending-fine").innerText = "Rs. " + parseFloat(data.fineTrends.pending_fine || 0).toFixed(2);
+            }
+
+            // 7. RENDER: Overdue Defaulters Table Structure Loop
+            if (data.defaulters && data.defaulters.length > 0) {
+                defaultersTableBody.innerHTML = "";
+                data.defaulters.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.student_id}</td>
+                        <td><strong>${student.name}</strong></td>
+                        <td style="font-family: monospace;">${student.book_id}</td>
+                        <td style="color: var(--error-color); font-weight: 600;">${student.due_date}</td>
+                        <td style="color: var(--error-color); font-weight: bold;">Rs. ${parseFloat(student.fine || 0).toFixed(2)}</td>
+                    `;
+                    defaultersTableBody.appendChild(row);
+                });
+            } else {
+                defaultersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No overdue books pending in system ledger.</td></tr>';
+            }
+        }
+    })
+    .catch(err => console.log("Reporting metrics pipeline compile failure:", err));
 }
 </script>
 </body>
