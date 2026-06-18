@@ -1,4 +1,4 @@
-
+<!-- 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -162,6 +162,18 @@
 </head>
 <body>
 
+     <div class="content-panel" style="margin-top: 20px; border-top: 4px solid #f39c12;">
+    <h3 style="display: flex; align-items: center; gap: 8px;">
+        ✨ AI Smart Recommendations
+    </h3>
+    <p style="font-size: 11px; color: #666; margin-top: -5px;">
+        Books personalized based on your Department, Semester, and trending library assets.
+    </p>
+    <div id="ai-recommendations-box" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+        <p style="color: #999; font-size: 12px; text-align: center;">Analyzing profile architecture to stream recommendations...</p>
+    </div>
+</div>
+
     <div id="view-auth" class="auth-wrapper">
         <div class="auth-card">
             <h2>SSUET Library Core</h2>
@@ -218,6 +230,7 @@
         </div>
     </div>
 
+   
     <script>
         const BACKEND_BASE_URL = "http://192.168.100.6:5000";
         let currentActiveUserSessionKey = "";
@@ -259,7 +272,61 @@
                 logBox.innerText = " Exception: Node backend server is offline.";
             });
         });
+function fetchAIRecommendations(studentId) {
+    const aiContainer = document.getElementById('ai-recommendations-box');
 
+    fetch(`${BACKEND_BASE_URL}/api/recommendations/${studentId}`)
+    .then(res => res.json())
+    .then(response => {
+        if(response.success && response.recommendations.length > 0) {
+            aiContainer.innerHTML = ""; // Clear loader text
+            
+            response.recommendations.forEach(book => {
+                const recRow = document.createElement('div');
+                recRow.style.cssText = `
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #fff9f2;
+                    border-left: 4px solid #f39c12;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                `;
+
+                recRow.innerHTML = `
+                    <div>
+                        <span style="font-size: 13px; font-weight: 600; color: #2c3e50;">${book.title}</span>
+                        <br>
+                        <span style="font-size: 10px; color: #7f8c8d; font-family: monospace;">Code: ${book.book_id}</span>
+                    </div>
+                    <button class="inline-return-btn" 
+                            style="margin-top:0; padding: 4px 10px; font-size: 11px; background: #f39c12;" 
+                            onclick="autoSelectBookForQR('${book.book_id}')">
+                        Select
+                    </button>
+                `;
+                aiContainer.appendChild(recRow);
+            });
+        } else {
+            aiContainer.innerHTML = `<p style="color: #999; font-size: 12px; text-align: center;">No targeted recommendations found for your profile tier yet.</p>`;
+        }
+    })
+    .catch(() => {
+        aiContainer.innerHTML = `<p style="color: var(--error-color); font-size: 11px; text-align: center;">Failed to populate recommendation stream vectors.</p>`;
+    });
+}
+
+// User jab recommend ki hui book par click karega to dropdown auto select ho jayega
+function autoSelectBookForQR(bookId) {
+    const dropdown = document.getElementById('select-book-token');
+    if(dropdown) {
+        dropdown.value = bookId;
+        // Visual feedback to user
+        dropdown.style.borderColor = "#f39c12";
+        setTimeout(() => dropdown.style.borderColor = "#ccc", 1500);
+    }
+}
         function executeAuthorizedUIPipeline(studentId) {
             currentActiveUserSessionKey = studentId;
             document.getElementById('view-auth').style.display = 'none';
@@ -462,6 +529,572 @@
             modalElement.style.display = "none";
             if (returnTrackingInterval) clearInterval(returnTrackingInterval);
         });
+        modalElement.addEventListener('click', (event) => {
+            if(event.target === modalElement) {
+                modalElement.style.display = "none";
+                if (returnTrackingInterval) clearInterval(returnTrackingInterval);
+            }
+        });
+
+        document.getElementById('btn-compile-qr').addEventListener('click', () => {
+            const selectedBook = document.getElementById('select-book-token').value;
+            const stateLabel = document.getElementById('text-qr-state');
+            const targetImg = document.getElementById('img-qr-target');
+
+            if(!selectedBook) {
+                alert("Please verify database inventory catalog first!");
+                return;
+            }
+
+            stateLabel.innerText = "Compiling token data pipeline...";
+            targetImg.style.display = "none";
+
+            const compiledPayloadLink = `${BACKEND_BASE_URL}/issue/${selectedBook}?student_id=${currentActiveUserSessionKey}`;
+            targetImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(compiledPayloadLink)}`;
+            targetImg.onload = () => {
+                stateLabel.style.display = "none";
+                targetImg.style.display = "block";
+            };
+        });
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSUET Smart Library - Core Portal</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        :root {
+            --primary-color: #0f5a6e;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .auth-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--primary-color);
+        }
+        .auth-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+        }
+        .auth-card h2 { margin: 0 0 10px 0; color: var(--primary-color); text-align: center; font-weight: 700; }
+        .auth-card p { color: #666; font-size: 13px; text-align: center; margin-bottom: 25px; }
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        .btn-core {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .btn-core:hover { background-color: #0a4352; }
+        .error-alert { color: var(--error-color); text-align: center; margin-top: 10px; font-size: 14px; font-weight: 500; }
+        .portal-layout { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .portal-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .portal-header h2 { margin: 0; font-size: 20px; }
+        .header-badges { display: flex; gap: 10px; align-items: center; }
+        .session-badge { background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 4px; font-weight: 500; font-size: 14px; }
+        .count-badge { background: #f39c12; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .fine-badge { background: #2ecc71; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: background 0.3s ease; }
+        .logout-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .logout-btn:hover { background: #c0392b; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 25px; margin-top: 25px; }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        .content-panel { background: var(--card-bg); padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .content-panel h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #f0f4f5; padding-bottom: 10px; }
+        .qr-render-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            margin-top: 15px;
+            background: #fafafa;
+        }
+        .qr-placeholder-img { max-width: 180px; height: auto; display: none; }
+        .transaction-log-container { margin-top: 20px; max-height: 520px; overflow-y: auto; }
+        .log-row {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .log-row h4 { margin: 0 0 5px 0; font-size: 14px; color: #111; }
+        .log-row p { margin: 0; font-size: 11px; color: #666; }
+        .badge-due { font-size: 11px; font-weight: bold; color: var(--error-color); background: #fde8e8; padding: 4px 8px; border-radius: 4px; }
+        .inline-return-btn { background: #0f5a6e; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+        .inline-return-btn:hover { background: #0a4352; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 100%;
+            max-width: 380px;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+        .modal-card h3 { margin-top: 0; color: #0f5a6e; }
+        .modal-card p { font-size: 12px; color: #666; margin-bottom: 15px; }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-modal:hover { color: #888; }
+        .return-qr-frame { width: 180px; height: 180px; display: none; margin: 0 auto; border: 1px solid #ddd; border-radius: 6px; }
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes blink {
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="view-auth" class="auth-wrapper">
+        <div class="auth-card">
+            <h2>SSUET Library Core</h2>
+            <p>MS SQL Server Persistent Environment Architecture</p>
+            <input type="text" id="input-student-id" placeholder="Enter Roll Number (e.g., CS-2023-001)" class="form-control">
+            <button id="btn-login-trigger" class="btn-core">Run Session Authentication</button>
+            <div id="auth-error-log" class="error-alert"></div>
+        </div>
+    </div>
+
+    <div id="view-portal" class="portal-layout" style="display: none;">
+        <header class="portal-header">
+            <h2>SSUET Smart Library Automation</h2>
+            <div class="header-badges">
+                <div id="ui-fine-count" class="fine-badge">Total Fine: Rs. 0.00</div>
+                <div id="ui-borrowed-count" class="count-badge">Borrowed: 0 / 3</div>
+                <div id="ui-session-badge" class="session-badge">ID: Loaded</div>
+                <button id="btn-logout" class="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                
+                <div class="content-panel">
+                    <h3>QR Compiler Sandbox</h3>
+                    <p style="font-size: 12px; color: #666;">Available inventory dataset streaming from live table 'Book2'.</p>
+                    <label style="font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px;">Select Book From Database:</label>
+                    <select id="select-book-token" class="form-control">
+                        <option value="">Loading catalog books matrix...</option>
+                    </select>
+                    <button id="btn-compile-qr" class="btn-core" style="background:#2c3e50;">Plot Text Stream Matrix</button>
+                    <div class="qr-render-area">
+                        <div id="text-qr-state" style="color: #999; font-size: 13px;">Awaiting Pipeline Stream Command</div>
+                        <img id="img-qr-target" src="" alt="Live Generated QR Token" class="qr-placeholder-img">
+                    </div>
+                </div>
+
+                <div class="content-panel" style="border-top: 4px solid #f39c12;">
+                    <h3 style="display: flex; align-items: center; gap: 8px; color: #f39c12;">
+                        ✨ AI Smart Recommendations
+                    </h3>
+                    <p style="font-size: 11px; color: #666; margin-top: -5px;">
+                        Books personalized based on your historical types preference, department trends, and semester modules.
+                    </p>
+                    <div id="ai-recommendations-box" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                        <p style="color: #999; font-size: 12px; text-align: center;">Analyzing profile data structure to extract preferred vectors...</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="content-panel">
+                <h3>Permanent Database Transaction Logs</h3>
+                <p style="font-size: 11px; color:#888; margin-top:-10px;">Persistent ledger historical rows synchronized with real tables state.</p>
+                <div id="registry-historical-list" class="transaction-log-container">
+                    <p id="text-empty-registry" style="color: #999; font-size: 13px; text-align: center;">No active transaction records retrieved yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="return-qr-modal" class="modal-overlay">
+        <div class="modal-card">
+            <span class="close-modal" id="btn-close-modal">&times;</span>
+            <h3>Return Active Asset</h3>
+            <p>Show this digital vector standard code to the librarian to automatedly sync MS SQL Server permanent operational register logs history.</p>
+            <div id="modal-qr-loading" style="color:#999; font-size:13px; padding:20px;">Compiling Bypass Data Stream Block...</div>
+            <img id="img-return-qr" src="" alt="Return Identification Code Vector" class="return-qr-frame">
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_BASE_URL = "http://192.168.100.6:5000";
+        let currentActiveUserSessionKey = "";
+        let initialActiveBooksCount = -1;
+        let booksTrackingInterval = null;
+        let returnTrackingInterval = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUserSession = localStorage.getItem('SSUET_STUDENT_SESSION');
+            if(savedUserSession) {
+                executeAuthorizedUIPipeline(savedUserSession);
+            }
+        });
+
+        document.getElementById('btn-login-trigger').addEventListener('click', () => {
+            const userIdToken = document.getElementById('input-student-id').value.trim();
+            const logBox = document.getElementById('auth-error-log');
+
+            if(!userIdToken) {
+                logBox.innerText = "Error execution: Identity parameter cannot be null.";
+                return;
+            }
+
+            fetch(`${BACKEND_BASE_URL}/api/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: userIdToken })
+            })
+            .then(res => res.json())
+            .then(response => {
+                if(response.success) {
+                    localStorage.setItem('SSUET_STUDENT_SESSION', response.student_id);
+                    executeAuthorizedUIPipeline(response.student_id);
+                } else {
+                    logBox.innerText = response.message || "Access Denied: Record signature not found.";
+                }
+            })
+            .catch(() => {
+                logBox.innerText = " Exception: Node backend server is offline.";
+            });
+        });
+
+        function executeAuthorizedUIPipeline(studentId) {
+            currentActiveUserSessionKey = studentId;
+            document.getElementById('view-auth').style.display = 'none';
+            document.getElementById('view-portal').style.display = 'block';
+            document.getElementById('ui-session-badge').innerText = `User ID: ${currentActiveUserSessionKey}`;
+            
+            fetchBooksFromDatabase();
+            fetchTransactionsFromDatabase();
+            fetchAIRecommendations(studentId); // Running engine on authorization completion
+            
+            setTimeout(checkDailyFineAlert, 1500); 
+            startLiveBorrowTracking();
+        }
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('SSUET_STUDENT_SESSION');
+            if (booksTrackingInterval) clearInterval(booksTrackingInterval);
+            if (returnTrackingInterval) clearInterval(returnTrackingInterval);
+            window.location.reload();
+        });
+
+        function fetchAIRecommendations(studentId) {
+            const aiContainer = document.getElementById('ai-recommendations-box');
+
+            fetch(`${BACKEND_BASE_URL}/api/recommendations/${studentId}`)
+            .then(res => res.json())
+            .then(response => {
+                if(response.success && response.recommendations.length > 0) {
+                    aiContainer.innerHTML = ""; 
+                    
+                    response.recommendations.forEach(book => {
+                        const recRow = document.createElement('div');
+                        recRow.style.cssText = `
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            background: #fff9f2;
+                            border-left: 4px solid #f39c12;
+                            padding: 10px 15px;
+                            border-radius: 6px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                        `;
+
+                        recRow.innerHTML = `
+                            <div>
+                                <span style="font-size: 13px; font-weight: 600; color: #2c3e50;">${book.title}</span>
+                                <br>
+                                <span style="font-size: 10px; color: #7f8c8d; font-family: monospace;">Code: ${book.book_id}</span>
+                            </div>
+                            <button class="inline-return-btn" 
+                                    style="margin-top:0; padding: 4px 10px; font-size: 11px; background: #f39c12;" 
+                                    onclick="autoSelectBookForQR('${book.book_id}')">
+                                Select
+                            </button>
+                        `;
+                        aiContainer.appendChild(recRow);
+                    });
+                } else {
+                    aiContainer.innerHTML = `<p style="color: #999; font-size: 12px; text-align: center;">No history type or targeted recommendations matching your matrix tier yet.</p>`;
+                }
+            })
+            .catch(() => {
+                aiContainer.innerHTML = `<p style="color: var(--error-color); font-size: 11px; text-align: center;">Failed to populate recommendation stream vectors.</p>`;
+            });
+        }
+
+        function autoSelectBookForQR(bookId) {
+            const dropdown = document.getElementById('select-book-token');
+            if(dropdown) {
+                dropdown.value = bookId;
+                dropdown.style.borderColor = "#f39c12";
+                setTimeout(() => dropdown.style.borderColor = "#ccc", 1500);
+            }
+        }
+
+        function fetchBooksFromDatabase() {
+            const dropdown = document.getElementById('select-book-token');
+            fetch(`${BACKEND_BASE_URL}/api/books`)
+            .then(res => res.json())
+            .then(response => {
+                if(response.success && response.data.length > 0) {
+                    dropdown.innerHTML = ""; 
+                    response.data.forEach(book => {
+                        const option = document.createElement('option');
+                        option.value = book.id; 
+                        option.innerText = `${book.title} [Code: ${book.id} | Stock Left: ${book.available_quantity}]`;
+                        dropdown.appendChild(option);
+                    });
+                } else {
+                    dropdown.innerHTML = "<option value=''>No available books inside DB catalog</option>";
+                }
+            })
+            .catch(() => {
+                dropdown.innerHTML = "<option value=''>Failed to reach Database API Matrix</option>";
+            });
+        }
+
+        function calculateAndRenderGlobalFine(calculatedFinePool) {
+            const fineUIElement = document.getElementById('ui-fine-count');
+            fineUIElement.innerText = `Total Fine: Rs. ${calculatedFinePool.toFixed(2)}`;
+            
+            if(calculatedFinePool > 0) {
+                fineUIElement.style.background = "#e74c3c";
+            } else {
+                fineUIElement.style.background = "#2ecc71";
+            }
+            localStorage.setItem(`FINE_LEADERBOARD_${currentActiveUserSessionKey}`, calculatedFinePool);
+        }
+
+        function checkDailyFineAlert() {
+            const savedFine = localStorage.getItem(`FINE_LEADERBOARD_${currentActiveUserSessionKey}`);
+            const currentFineAmount = parseFloat(savedFine || 0);
+
+            if (currentFineAmount > 0) {
+                alert(`⚠️ SSUET Smart Library System Alert:\n\nProfile Status: Pending Fine Clearance.\nOutstanding Amount: Rs. ${currentFineAmount.toFixed(2)}.\n\nAction Required: Please visit the library registry desk to return pending assets and settle your account.`);
+            }
+        }
+
+        function fetchTransactionsFromDatabase() {
+            const listContainer = document.getElementById('registry-historical-list');
+            const countBadge = document.getElementById('ui-borrowed-count');
+            
+            fetch(`${BACKEND_BASE_URL}/r`)
+            .then(res => res.json())
+            .then(data => {
+                const studentTransactions = data.filter(log => log.student_id === currentActiveUserSessionKey);
+                const activeIssuedBooks = studentTransactions.filter(log => log.status === 'issued');
+                countBadge.innerText = `Borrowed: ${activeIssuedBooks.length} / 3`;
+                
+                if (initialActiveBooksCount === -1) {
+                    initialActiveBooksCount = activeIssuedBooks.length;
+                } else if (activeIssuedBooks.length > initialActiveBooksCount) {
+                    initialActiveBooksCount = activeIssuedBooks.length;
+                    alert("🎉 Success: Book issued successfully! SSUET network registry updated cleanly.");
+                    fetchAIRecommendations(currentActiveUserSessionKey); // Live reloading on asset changes
+                } else {
+                    initialActiveBooksCount = activeIssuedBooks.length;
+                }
+
+                let accumulatedFineCounter = 0;
+
+                if(studentTransactions.length > 0) {
+                    listContainer.innerHTML = ""; 
+                    studentTransactions.forEach(log => {
+                        const logRow = document.createElement('div');
+                        logRow.className = "log-row";
+                        
+                        const isReturned = log.status === 'returned';
+                        const badgeColor = isReturned ? 'background:#d4edda; color:#155724;' : 'background:#fde8e8; color:#e74c3c;';
+                        
+                        let finalFineDisplay = "";
+                        let rowFineAmount = 0;
+                        let returnButtonHTML = "";
+
+                        if (isReturned) {
+                            rowFineAmount = log.fine ? parseFloat(log.fine) : 0;
+                            accumulatedFineCounter += rowFineAmount;
+                            finalFineDisplay = rowFineAmount > 0 
+                                ? `<span style="color:#e74c3c; font-weight:bold;">Fine: Rs. ${rowFineAmount.toFixed(2)}</span>` 
+                                : `<span style="color:#2ecc71;">No Fine</span>`;
+                        } else {
+                            const dueDateObj = new Date(log.due_date);
+                            const todayObj = new Date();
+                            todayObj.setHours(0,0,0,0);
+                            dueDateObj.setHours(0,0,0,0);
+
+                            if (todayObj > dueDateObj) {
+                                const timeDiff = todayObj.getTime() - dueDateObj.getTime();
+                                const overdueDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                                rowFineAmount = overdueDays * 10; 
+                                accumulatedFineCounter += rowFineAmount;
+                                finalFineDisplay = `<span style="color:#e74c3c; font-weight:bold; animation: blink 1s infinite;">Overdue: Rs. ${rowFineAmount.toFixed(2)} (${overdueDays}d Late)</span>`;
+                            } else {
+                                finalFineDisplay = `<span style="color:#2ecc71;">No Fine (Active)</span>`;
+                            }
+                            returnButtonHTML = `<button class="inline-return-btn" onclick="openReturnQRModal('${log.transaction_id}', '${log.book_id}')">Generate Return QR Asset</button>`;
+                        }
+                        
+                        const returnDateInfo = isReturned && log.return_date 
+                            ? `<br><strong>Returned On:</strong> ${new Date(log.return_date).toISOString().slice(0, 10)}` 
+                            : '';
+
+                        logRow.innerHTML = `
+                            <div style="flex: 1;">
+                                <h4>Book Asset Code: ${log.book_id}</h4>
+                                <p>Transaction Sync ID: <strong>${log.transaction_id}</strong></p>
+                                <p style="margin-top: 4px; font-size: 11px; color:#555;">
+                                    <strong>Due Date:</strong> <span style="color:#e74c3c; font-weight:600;">${log.due_date}</span>
+                                    ${returnDateInfo}
+                                </p>
+                                ${returnButtonHTML}
+                            </div>
+                            <div style="text-align: right; min-width: 140px;">
+                                <span class="badge-due" style="${badgeColor} display:inline-block; margin-bottom:5px;">Status: ${log.status.toUpperCase()}</span>
+                                <div style="font-size: 11px; margin-top:2px;">${finalFineDisplay}</div>
+                            </div>
+                        `;
+                        listContainer.appendChild(logRow);
+                    });
+                } else {
+                    listContainer.innerHTML = `<p id="text-empty-registry" style="color: #999; font-size: 13px; text-align: center;">No active transaction records retrieved yet.</p>`;
+                }
+                calculateAndRenderGlobalFine(accumulatedFineCounter);
+            })
+            .catch(() => {
+                listContainer.innerHTML = `<p style="color: var(--error-color); text-align:center; font-size:11px;">Error syncing permanent ledger records.</p>`;
+            });
+        }
+
+        function startLiveBorrowTracking() {
+            if (booksTrackingInterval) clearInterval(booksTrackingInterval);
+            booksTrackingInterval = setInterval(() => {
+                fetchTransactionsFromDatabase();
+            }, 4000);
+        }
+
+        const modalElement = document.getElementById('return-qr-modal');
+        const imgElement = document.getElementById('img-return-qr');
+        const loadingElement = document.getElementById('modal-qr-loading');
+
+        function openReturnQRModal(transactionId, bookId) {
+            modalElement.style.display = "flex";
+            loadingElement.style.display = "block";
+            imgElement.style.display = "none";
+
+            const compiledReturnPayloadString = `${BACKEND_BASE_URL}/api/circulation/return?transaction_id=${transactionId}&book_id=${bookId}`;
+            imgElement.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(compiledReturnPayloadString)}`;
+            imgElement.onload = () => {
+                loadingElement.style.display = "none";
+                imgElement.style.display = "block";
+            };
+
+            if (returnTrackingInterval) clearInterval(returnTrackingInterval);
+            
+            returnTrackingInterval = setInterval(() => {
+                fetch(`${BACKEND_BASE_URL}/r`)
+                .then(res => res.json())
+                .then(data => {
+                    const currentTxn = data.find(log => log.transaction_id === transactionId);
+                    if (currentTxn && currentTxn.status === 'returned') {
+                        clearInterval(returnTrackingInterval);
+                        modalElement.style.display = "none";
+                        alert("🎉 Success: Book returned securely! Syncing system logs...");
+                        
+                        fetchBooksFromDatabase();
+                        fetchTransactionsFromDatabase();
+                        fetchAIRecommendations(currentActiveUserSessionKey); // Instant reload
+                    }
+                })
+                .catch(err => console.log("Background synchronization tracking..."));
+            }, 3000);
+        }
+
+        document.getElementById('btn-close-modal').addEventListener('click', () => {
+            modalElement.style.display = "none";
+            if (returnTrackingInterval) clearInterval(returnTrackingInterval);
+        });
+        
         modalElement.addEventListener('click', (event) => {
             if(event.target === modalElement) {
                 modalElement.style.display = "none";
