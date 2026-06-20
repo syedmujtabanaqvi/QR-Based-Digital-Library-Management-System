@@ -8,16 +8,18 @@ bcrypt.compare(password, hash, (err, result) => {
 });
 
 
-// const bcrypt = require('bcrypt');
+// // const bcrypt = require('bcrypt');
 
-// const password = 'admin123';
-// const saltRounds = 10;
+// // const password = 'admin123';
+// // const saltRounds = 10;
 
-// bcrypt.hash(password, saltRounds, (err, hash) => {
-//   if (err) {
-//     console.error(err);
-//     return;
-//   }
+// // bcrypt.hash(password, saltRounds, (err, hash) => {
+// //   if (err) {
+// //     console.error(err);
+// //     return;
+// //   }
 
-//   console.log(hash);
-// });
+// //   console.log(hash);
+// // });
+
+
